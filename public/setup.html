@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fridge Setup - Magnet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .setup-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .instructions {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 30px 0;
+            display: inline-block;
+        }
+        
+        #qrcode {
+            margin: 0 auto;
+        }
+        
+        .fridge-id {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(76, 175, 80, 0.2);
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .continue-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        
+        .continue-btn:hover {
+            background: #45a049;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        
+        .step-number {
+            background: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1>🧊 Fridge Setup</h1>
+        
+        <div class="instructions">
+            <p>Pair your iPhone with this fridge by scanning the QR code below:</p>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Open your iPhone's Camera app</strong>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Point it at the QR code below</strong>
+        </div>
+        
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Tap the notification to set up your shortcut</strong>
+        </div>
+        
+        <div class="qr-container">
+            <div id="qrcode"></div>
+        </div>
+        
+        <div class="fridge-id">
+            <strong>Fridge ID:</strong><br>
+            <span id="fridgeId">Loading...</span>
+        </div>
+        
+        <div class="status">
+            ✅ This fridge is ready to receive notes!
+        </div>
+        
+        <button class="continue-btn" onclick="goToFridge()">
+            Continue to Fridge Notes
+        </button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <script>
+        // Generate unique fridge ID
+        function generateFridgeId() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 12; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+        
+        // Get or create fridge ID
+        let fridgeId = localStorage.getItem('fridgeId');
+        if (!fridgeId) {
+            fridgeId = generateFridgeId();
+            localStorage.setItem('fridgeId', fridgeId);
+        }
+        
+        // Display fridge ID
+        document.getElementById('fridgeId').textContent = fridgeId;
+        
+        // Create setup URL for iPhone shortcut
+        const setupUrl = `${window.location.origin}/shortcut-setup?fridgeId=${fridgeId}`;
+        
+        // Generate QR code
+        QRCode.toCanvas(document.getElementById('qrcode'), setupUrl, {
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, function (error) {
+            if (error) console.error(error);
+            console.log('QR code generated successfully!');
+        });
+        
+        function goToFridge() {
+            // Redirect to fridge-specific URL
+            window.location.href = `/fridge/${fridgeId}`;
+        }
+        
+        // Auto-redirect after 30 seconds if they don't click
+        setTimeout(() => {
+            if (confirm('Ready to go to your fridge notes?')) {
+                goToFridge();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
