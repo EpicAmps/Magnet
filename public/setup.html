@@ -175,11 +175,11 @@
             />
         </div>
         
-        <div class="qr-container">
+        <div class="qr-container" style="display: none;">
             <div id="qrcode"></div>
-            <div id="qrFallback" style="display: none;">
-                <p style="color: #666; margin-bottom: 15px;">QR Code not available</p>
-                <button class="copy-btn" onclick="copySetupUrl()">📋 Copy Setup Link</button>
+            <div id="qrFallback">
+                <p style="color: #666; margin-bottom: 15px;">QR Code temporarily disabled</p>
+                <button class="copy-btn" onclick="copySetupUrl()">📋 Copy Email Address</button>
             </div>
         </div>
         
@@ -293,7 +293,7 @@
         
         function goToFridge() {
             if (fridgeId) {
-                window.location.href = `/fridge/${fridgeId}`;
+                window.location.href = `/fridge.html?id=${fridgeId}`;
             } else {
                 alert('Please enter a fridge name first!');
             }
