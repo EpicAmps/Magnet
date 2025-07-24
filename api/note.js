@@ -1,9 +1,5 @@
-// Simple in-memory storage for MVP
-let latestNote = {
-  content: 'No notes yet! Send one from your iPhone.',
-  timestamp: Date.now(),
-  id: 'default'
-};
+// Simple in-memory storage for MVP - organized by fridge ID
+const fridgeNotes = new Map();
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -18,37 +14,61 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       // iOS Shortcut posting new note
-      const { content } = req.body;
+      const { content, fridgeId } = req.body;
       
       if (!content) {
         return res.status(400).json({ error: 'Content is required' });
+      }
+      
+      if (!fridgeId) {
+        return res.status(400).json({ error: 'Fridge ID is required' });
       }
 
       const noteData = {
         content,
         timestamp: Date.now(),
-        id: `note_${Date.now()}`
+        id: `note_${Date.now()}`,
+        fridgeId
       };
 
-      // Save to memory (will reset on function restart, but good for MVP)
-      latestNote = noteData;
+      // Save to fridge-specific storage
+      fridgeNotes.set(fridgeId, noteData);
       
-      // Ping all connected fridges
+      // Ping connected fridges with this specific ID
       const { notifyFridges } = await import('./ping.js');
       notifyFridges('note_updated', { 
         message: 'New note available',
-        noteId: noteData.id 
+        noteId: noteData.id,
+        fridgeId: fridgeId
       });
       
       return res.json({ 
         success: true, 
         message: 'Note saved successfully',
-        timestamp: noteData.timestamp 
+        timestamp: noteData.timestamp,
+        fridgeId: fridgeId
       });
       
     } else if (req.method === 'GET') {
       // Fridge fetching latest note
-      return res.json(latestNote);
+      const fridgeId = req.query.fridgeId;
+      
+      if (!fridgeId) {
+        return res.status(400).json({ error: 'Fridge ID is required' });
+      }
+      
+      const note = fridgeNotes.get(fridgeId);
+      
+      if (!note) {
+        return res.json({ 
+          content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
+          timestamp: Date.now(),
+          id: 'default',
+          fridgeId: fridgeId
+        });
+      }
+      
+      return res.json(note);
       
     } else {
       res.setHeader('Allow', ['GET', 'POST']);
