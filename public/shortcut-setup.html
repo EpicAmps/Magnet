@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone Setup - Magnet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .step-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #007AFF;
+        }
+        
+        .step-number {
+            background: #007AFF;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .step-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .step-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin: 10px 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        .highlight {
+            background: rgba(255, 235, 59, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .fridge-info {
+            background: rgba(76, 175, 80, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            border: 2px solid rgba(76, 175, 80, 0.5);
+        }
+        
+        .shortcut-url {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .copy-btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 1rem;
+        }
+        
+        .copy-btn:hover {
+            background: #0056CC;
+        }
+        
+        .warning {
+            background: rgba(255, 152, 0, 0.2);
+            border: 2px solid rgba(255, 152, 0, 0.5);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 iPhone Setup</h1>
+        
+        <div class="fridge-info">
+            <h3>🧊 Connected to Fridge</h3>
+            <p><strong>Fridge ID:</strong> <span id="fridgeIdDisplay"></span></p>
+            <p>Your shortcut will send notes to this specific fridge</p>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">1</span>
+                Open Shortcuts App
+            </div>
+            <div class="step-content">
+                Open the <strong>Shortcuts</strong> app on your iPhone
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">2</span>
+                Create New Shortcut
+            </div>
+            <div class="step-content">
+                Tap the <strong>"+"</strong> button to create a new shortcut<br>
+                Name it: <span class="highlight">"Send to Fridge"</span>
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">3</span>
+                Add "Receive Input" Action
+            </div>
+            <div class="step-content">
+                • Search for <strong>"Receive Input"</strong><br>
+                • Select <strong>"Receive Input from Share Sheet"</strong><br>
+                • Set input type to <strong>"Text"</strong>
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">4</span>
+                Add HTTP Request
+            </div>
+            <div class="step-content">
+                • Search for <strong>"Get Contents"</strong><br>
+                • Select <strong>"Get Contents of URL"</strong><br>
+                • Configure the request:
+                
+                <div class="code-block">URL: <span id="apiUrl"></span>
+
+Method: POST
+
+Headers:
+Content-Type: application/json
+
+Request Body (JSON):
+{
+  "content": [Shortcut Input],
+  "fridgeId": "<span id="fridgeIdInJson"></span>"
+}</div>
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">5</span>
+                Add Success Notification
+            </div>
+            <div class="step-content">
+                • Search for <strong>"Show Notification"</strong><br>
+                • Title: <span class="highlight">"📝 Sent to Fridge!"</span><br>
+                • Body: <span class="highlight">"Your note is now on the fridge screen"</span>
+            </div>
+        </div>
+        
+        <div class="step-card">
+            <div class="step-title">
+                <span class="step-number">6</span>
+                Enable Share Sheet
+            </div>
+            <div class="step-content">
+                • Tap settings ⚙️ at the bottom<br>
+                • Toggle ON <strong>"Use with Share Sheet"</strong><br>
+                • Make sure <strong>"Text"</strong> is selected as accepted type<br>
+                • Choose an icon like 🧊 or 🏠
+            </div>
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> Make sure to copy the exact URL and fridge ID above. Your shortcut won't work without them!
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="copy-btn" onclick="copyApiUrl()">📋 Copy API URL</button>
+            <button class="copy-btn" onclick="copyFridgeId()">📋 Copy Fridge ID</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <p><strong>✨ Once set up, share any note and select "Send to Fridge"!</strong></p>
+        </div>
+    </div>
+
+    <script>
+        // Get fridge ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const fridgeId = urlParams.get('fridgeId');
+        
+        if (fridgeId) {
+            document.getElementById('fridgeIdDisplay').textContent = fridgeId;
+            document.getElementById('fridgeIdInJson').textContent = fridgeId;
+            
+            // Set API URL
+            const apiUrl = `${window.location.origin}/api/note`;
+            document.getElementById('apiUrl').textContent = apiUrl;
+        } else {
+            document.getElementById('fridgeIdDisplay').textContent = 'ERROR - No fridge ID found';
+        }
+        
+        function copyApiUrl() {
+            const apiUrl = document.getElementById('apiUrl').textContent;
+            navigator.clipboard.writeText(apiUrl).then(() => {
+                alert('API URL copied to clipboard!');
+            });
+        }
+        
+        function copyFridgeId() {
+            navigator.clipboard.writeText(fridgeId).then(() => {
+                alert('Fridge ID copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
