@@ -1,4 +1,9 @@
-import { kv } from '@vercel/kv';
+// Simple in-memory storage for MVP
+let latestNote = {
+  content: 'No notes yet! Send one from your iPhone.',
+  timestamp: Date.now(),
+  id: 'default'
+};
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -25,8 +30,8 @@ export default async function handler(req, res) {
         id: `note_${Date.now()}`
       };
 
-      // Save to Vercel KV
-      await kv.set('latest-note', noteData);
+      // Save to memory (will reset on function restart, but good for MVP)
+      latestNote = noteData;
       
       // Ping all connected fridges
       const { notifyFridges } = await import('./ping.js');
@@ -43,17 +48,7 @@ export default async function handler(req, res) {
       
     } else if (req.method === 'GET') {
       // Fridge fetching latest note
-      const note = await kv.get('latest-note');
-      
-      if (!note) {
-        return res.json({ 
-          content: 'No notes yet! Send one from your iPhone.',
-          timestamp: Date.now(),
-          id: 'default'
-        });
-      }
-      
-      return res.json(note);
+      return res.json(latestNote);
       
     } else {
       res.setHeader('Allow', ['GET', 'POST']);
