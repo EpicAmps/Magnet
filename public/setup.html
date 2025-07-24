@@ -1,4 +1,15 @@
-<!DOCTYPE html>
+.step-number {
+            background: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -99,17 +110,32 @@
             text-align: left;
         }
         
-        .step-number {
-            background: #4CAF50;
+        .copy-btn {
+            background: #2196F3;
             color: white;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 10px;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: #1976D2;
+        }
+        
+        .setup-url {
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -128,7 +154,7 @@
         
         <div class="step">
             <span class="step-number">2</span>
-            <strong>Point it at the QR code below</strong>
+            <strong>Point it at the QR code below (or use the backup link)</strong>
         </div>
         
         <div class="step">
@@ -138,6 +164,10 @@
         
         <div class="qr-container">
             <div id="qrcode"></div>
+            <div id="qrFallback" style="display: none;">
+                <p style="color: #666; margin-bottom: 15px;">QR Code not available</p>
+                <button class="copy-btn" onclick="copySetupUrl()">📋 Copy Setup Link</button>
+            </div>
         </div>
         
         <div class="fridge-id">
@@ -146,7 +176,13 @@
         </div>
         
         <div class="status">
-            ✅ This fridge is ready to receive notes!
+            ✅ This fridge is ready to receive notes!<br>
+            <small>If QR code doesn't work, copy the setup link below and open it on your iPhone</small>
+        </div>
+        
+        <div class="setup-url" id="setupUrlDisplay" style="display: none;">
+            <strong>Setup URL:</strong><br>
+            <span id="setupUrlText">Loading...</span>
         </div>
         
         <button class="continue-btn" onclick="goToFridge()">
@@ -179,7 +215,7 @@
         // Create setup URL for iPhone shortcut
         const setupUrl = `${window.location.origin}/shortcut-setup?fridgeId=${fridgeId}`;
         
-        // Generate QR code
+        // Generate QR code with fallback
         QRCode.toCanvas(document.getElementById('qrcode'), setupUrl, {
             width: 200,
             margin: 2,
@@ -188,9 +224,29 @@
                 light: '#FFFFFF'
             }
         }, function (error) {
-            if (error) console.error(error);
-            console.log('QR code generated successfully!');
+            if (error) {
+                console.error('QR Code generation failed:', error);
+                // Show fallback options
+                document.getElementById('qrcode').style.display = 'none';
+                document.getElementById('qrFallback').style.display = 'block';
+                document.getElementById('setupUrlDisplay').style.display = 'block';
+                document.getElementById('setupUrlText').textContent = setupUrl;
+            } else {
+                console.log('QR code generated successfully!');
+                // Also show the URL as backup
+                document.getElementById('setupUrlDisplay').style.display = 'block';
+                document.getElementById('setupUrlText').textContent = setupUrl;
+            }
         });
+        
+        function copySetupUrl() {
+            navigator.clipboard.writeText(setupUrl).then(() => {
+                alert('Setup URL copied! Paste it in your iPhone browser.');
+            }).catch(() => {
+                // Fallback for older browsers
+                prompt('Copy this URL and open it on your iPhone:', setupUrl);
+            });
+        }
         
         function goToFridge() {
             // Redirect to fridge-specific URL
