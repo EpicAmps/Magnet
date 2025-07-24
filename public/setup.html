@@ -1,15 +1,4 @@
-.step-number {
-            background: #4CAF50;
-            color: white;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 10px;
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -26,10 +15,9 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 20px;
             color: white;
+            overflow-x: hidden;
         }
         
         .setup-container {
@@ -41,6 +29,7 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
             max-width: 500px;
             width: 90%;
+            margin: 0 auto;
         }
         
         h1 {
@@ -56,16 +45,36 @@
             line-height: 1.6;
         }
         
-        .qr-container {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 30px 0;
-            display: inline-block;
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
         }
         
-        #qrcode {
-            margin: 0 auto;
+        .step-number {
+            background: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .fridge-name-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1.1rem;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            margin: 20px 0;
         }
         
         .fridge-id {
@@ -102,14 +111,6 @@
             background: #45a049;
         }
         
-        .step {
-            background: rgba(255, 255, 255, 0.05);
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: left;
-        }
-        
         .copy-btn {
             background: #2196F3;
             color: white;
@@ -124,18 +125,6 @@
         
         .copy-btn:hover {
             background: #1976D2;
-        }
-        
-        .setup-url {
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            font-family: monospace;
-            font-size: 0.9rem;
-            word-break: break-all;
-            line-height: 1.4;
         }
     </style>
 </head>
@@ -154,7 +143,7 @@
         
         <div class="step">
             <span class="step-number">2</span>
-            <strong>Scan the QR code or copy the email address</strong>
+            <strong>Copy the email address that appears</strong>
         </div>
         
         <div class="step">
@@ -162,58 +151,48 @@
             <strong>Email your notes to that address!</strong>
         </div>
         
-        <div style="margin: 20px 0;">
+        <div>
             <label for="fridgeNameInput" style="display: block; margin-bottom: 10px; font-weight: bold;">
                 🧊 Fridge Name:
             </label>
             <input 
                 type="text" 
                 id="fridgeNameInput" 
+                class="fridge-name-input"
                 placeholder="Kitchen, Garage, Office..." 
-                style="width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.1rem; background: rgba(255,255,255,0.9); color: #333;"
                 onchange="updateFridgeSetup()"
             />
         </div>
-        
-        <div class="qr-container" style="display: none;">
-            <div id="qrcode"></div>
-            <div id="qrFallback">
-                <p style="color: #666; margin-bottom: 15px;">QR Code temporarily disabled</p>
-                <button class="copy-btn" onclick="copySetupUrl()">📋 Copy Email Address</button>
-            </div>
-        </div>
-        
+
         <div class="fridge-id">
             <strong>📧 Email Address:</strong><br>
             <span id="fridgeEmail">Enter a fridge name first</span>
         </div>
         
-        <div class="fridge-id" style="margin-top: 10px;">
+        <div class="fridge-id">
             <strong>🆔 Fridge ID:</strong><br>
             <span id="fridgeId">-</span>
         </div>
-        
+
         <div class="status">
             ✅ This fridge is ready to receive email notes!<br>
             <small>Just email your notes to the address above and they'll appear instantly</small>
         </div>
         
-        <div class="setup-url" id="setupUrlDisplay" style="display: none;">
-            <strong>Setup URL:</strong><br>
-            <span id="setupUrlText">Loading...</span>
-        </div>
+        <button class="copy-btn" onclick="copyEmailAddress()">
+            📋 Copy Email Address
+        </button>
         
         <button class="continue-btn" onclick="goToFridge()">
             Continue to Fridge Display
         </button>
     </div>
 
-    <!-- QR code temporarily disabled due to CDN issues -->
     <script>
         let fridgeId = null;
         let fridgeName = null;
         
-        // Generate consistent fridge ID from name (same logic as backend)
+        // Generate consistent fridge ID from name
         function generateFridgeId(fridgeName) {
             let hash = 0;
             for (let i = 0; i < fridgeName.length; i++) {
@@ -232,7 +211,6 @@
             if (!rawName) {
                 document.getElementById('fridgeEmail').textContent = 'Enter a fridge name first';
                 document.getElementById('fridgeId').textContent = '-';
-                document.getElementById('qrcode').innerHTML = '';
                 return;
             }
             
@@ -248,12 +226,9 @@
             localStorage.setItem('fridgeId', fridgeId);
             localStorage.setItem('fridgeName', fridgeName);
             localStorage.setItem('fridgeEmail', emailAddress);
-            
-            // QR code generation temporarily disabled
-            // generateQRCode(emailAddress);
         }
         
-        function copySetupUrl() {
+        function copyEmailAddress() {
             const emailAddress = document.getElementById('fridgeEmail').textContent;
             if (emailAddress && emailAddress !== 'Enter a fridge name first') {
                 navigator.clipboard.writeText(emailAddress).then(() => {
@@ -276,7 +251,6 @@
         window.onload = function() {
             const savedName = localStorage.getItem('fridgeName');
             if (savedName) {
-                // Convert back to display format
                 const displayName = savedName.charAt(0).toUpperCase() + savedName.slice(1);
                 document.getElementById('fridgeNameInput').value = displayName;
                 updateFridgeSetup();
