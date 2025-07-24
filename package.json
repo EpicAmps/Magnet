@@ -1,1 +1,20 @@
-
+{
+  "name": "magnet-fridge-notes",
+  "version": "1.0.0",
+  "description": "Fridge Notes + Alerts System - sync Apple Notes to Samsung Smart Fridge",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step needed for serverless functions'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": ["fridge", "notes", "apple", "samsung", "sync"],
+  "author": "Your Name",
+  "license": "MIT"
+}
