@@ -8,9 +8,7 @@
     "build": "echo 'No build step needed for serverless functions'",
     "deploy": "vercel --prod"
   },
-  "dependencies": {
-    "@vercel/kv": "^1.0.1"
-  },
+  "dependencies": {},
   "engines": {
     "node": "18.x"
   },
