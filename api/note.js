@@ -1,5 +1,4 @@
-// Simple in-memory storage for MVP - organized by fridge ID
-const fridgeNotes = new Map();
+import { put, head } from '@vercel/blob';
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -31,8 +30,12 @@ export default async function handler(req, res) {
         fridgeId
       };
 
-      // Save to fridge-specific storage
-      fridgeNotes.set(fridgeId, noteData);
+      // Save to Vercel Blob with fridge-specific filename
+      const blobKey = `fridge-${fridgeId}.json`;
+      await put(blobKey, JSON.stringify(noteData), {
+        access: 'public',
+        contentType: 'application/json'
+      });
       
       // Ping connected fridges with this specific ID
       const { notifyFridges } = await import('./ping.js');
@@ -44,7 +47,7 @@ export default async function handler(req, res) {
       
       return res.json({ 
         success: true, 
-        message: 'Note saved successfully',
+        message: 'Note saved to magnet-blob successfully',
         timestamp: noteData.timestamp,
         fridgeId: fridgeId
       });
@@ -57,9 +60,36 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Fridge ID is required' });
       }
       
-      const note = fridgeNotes.get(fridgeId);
-      
-      if (!note) {
+      try {
+        // Try to fetch the note from blob storage
+        const blobKey = `fridge-${fridgeId}.json`;
+        const blobUrl = `${process.env.BLOB_READ_WRITE_TOKEN ? 'https://' + process.env.VERCEL_URL : window.location.origin}/api/blob/${blobKey}`;
+        
+        // Check if blob exists first
+        try {
+          await head(blobKey);
+        } catch (headError) {
+          // Blob doesn't exist, return default message
+          return res.json({ 
+            content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
+            timestamp: Date.now(),
+            id: 'default',
+            fridgeId: fridgeId
+          });
+        }
+        
+        // Fetch the blob content
+        const response = await fetch(blobUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch blob: ${response.status}`);
+        }
+        
+        const note = await response.json();
+        return res.json(note);
+        
+      } catch (error) {
+        console.error('Error fetching from blob:', error);
+        // Return default if blob fetch fails
         return res.json({ 
           content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
           timestamp: Date.now(),
@@ -67,8 +97,6 @@ export default async function handler(req, res) {
           fridgeId: fridgeId
         });
       }
-      
-      return res.json(note);
       
     } else {
       res.setHeader('Allow', ['GET', 'POST']);
