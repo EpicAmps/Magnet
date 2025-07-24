@@ -144,22 +144,35 @@
         <h1>🧊 Fridge Setup</h1>
         
         <div class="instructions">
-            <p>Pair your iPhone with this fridge by scanning the QR code below:</p>
+            <p>Set up your smart fridge to receive notes via email:</p>
         </div>
         
         <div class="step">
             <span class="step-number">1</span>
-            <strong>Open your iPhone's Camera app</strong>
+            <strong>Enter your fridge name below</strong>
         </div>
         
         <div class="step">
             <span class="step-number">2</span>
-            <strong>Point it at the QR code below (or use the backup link)</strong>
+            <strong>Scan the QR code or copy the email address</strong>
         </div>
         
         <div class="step">
             <span class="step-number">3</span>
-            <strong>Tap the notification to set up your shortcut</strong>
+            <strong>Email your notes to that address!</strong>
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <label for="fridgeNameInput" style="display: block; margin-bottom: 10px; font-weight: bold;">
+                🧊 Fridge Name:
+            </label>
+            <input 
+                type="text" 
+                id="fridgeNameInput" 
+                placeholder="Kitchen, Garage, Office..." 
+                style="width: 100%; padding: 15px; border-radius: 10px; border: none; font-size: 1.1rem; background: rgba(255,255,255,0.9); color: #333;"
+                onchange="updateFridgeSetup()"
+            />
         </div>
         
         <div class="qr-container">
@@ -171,13 +184,18 @@
         </div>
         
         <div class="fridge-id">
-            <strong>Fridge ID:</strong><br>
-            <span id="fridgeId">Loading...</span>
+            <strong>📧 Email Address:</strong><br>
+            <span id="fridgeEmail">Enter a fridge name first</span>
+        </div>
+        
+        <div class="fridge-id" style="margin-top: 10px;">
+            <strong>🆔 Fridge ID:</strong><br>
+            <span id="fridgeId">-</span>
         </div>
         
         <div class="status">
-            ✅ This fridge is ready to receive notes!<br>
-            <small>If QR code doesn't work, copy the setup link below and open it on your iPhone</small>
+            ✅ This fridge is ready to receive email notes!<br>
+            <small>Just email your notes to the address above and they'll appear instantly</small>
         </div>
         
         <div class="setup-url" id="setupUrlDisplay" style="display: none;">
@@ -186,79 +204,111 @@
         </div>
         
         <button class="continue-btn" onclick="goToFridge()">
-            Continue to Fridge Notes
+            Continue to Fridge Display
         </button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     <script>
-        // Generate unique fridge ID
-        function generateFridgeId() {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < 12; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
+        let fridgeId = null;
+        let fridgeName = null;
+        
+        // Generate consistent fridge ID from name (same logic as backend)
+        function generateFridgeId(fridgeName) {
+            let hash = 0;
+            for (let i = 0; i < fridgeName.length; i++) {
+                const char = fridgeName.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
             }
-            return result;
+            const baseId = Math.abs(hash).toString(36);
+            return (baseId + '000000000000').substring(0, 12);
         }
         
-        // Get or create fridge ID
-        let fridgeId = localStorage.getItem('fridgeId');
-        if (!fridgeId) {
-            fridgeId = generateFridgeId();
+        function updateFridgeSetup() {
+            const nameInput = document.getElementById('fridgeNameInput');
+            const rawName = nameInput.value.trim();
+            
+            if (!rawName) {
+                document.getElementById('fridgeEmail').textContent = 'Enter a fridge name first';
+                document.getElementById('fridgeId').textContent = '-';
+                document.getElementById('qrcode').innerHTML = '';
+                return;
+            }
+            
+            fridgeName = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            fridgeId = generateFridgeId(fridgeName);
+            
+            // Update display
+            const emailAddress = `${fridgeName}@magnet-mu.vercel.app`;
+            document.getElementById('fridgeEmail').textContent = emailAddress;
+            document.getElementById('fridgeId').textContent = fridgeId;
+            
+            // Store in localStorage for fridge page
             localStorage.setItem('fridgeId', fridgeId);
+            localStorage.setItem('fridgeName', fridgeName);
+            localStorage.setItem('fridgeEmail', emailAddress);
+            
+            // Generate QR code with email address
+            generateQRCode(emailAddress);
         }
         
-        // Display fridge ID
-        document.getElementById('fridgeId').textContent = fridgeId;
-        
-        // Create setup URL for iPhone shortcut
-        const setupUrl = `${window.location.origin}/shortcut-setup?fridgeId=${fridgeId}`;
-        
-        // Generate QR code with fallback
-        QRCode.toCanvas(document.getElementById('qrcode'), setupUrl, {
-            width: 200,
-            margin: 2,
-            color: {
-                dark: '#000000',
-                light: '#FFFFFF'
-            }
-        }, function (error) {
-            if (error) {
-                console.error('QR Code generation failed:', error);
-                // Show fallback options
-                document.getElementById('qrcode').style.display = 'none';
-                document.getElementById('qrFallback').style.display = 'block';
-                document.getElementById('setupUrlDisplay').style.display = 'block';
-                document.getElementById('setupUrlText').textContent = setupUrl;
-            } else {
-                console.log('QR code generated successfully!');
-                // Also show the URL as backup
-                document.getElementById('setupUrlDisplay').style.display = 'block';
-                document.getElementById('setupUrlText').textContent = setupUrl;
-            }
-        });
-        
-        function copySetupUrl() {
-            navigator.clipboard.writeText(setupUrl).then(() => {
-                alert('Setup URL copied! Paste it in your iPhone browser.');
-            }).catch(() => {
-                // Fallback for older browsers
-                prompt('Copy this URL and open it on your iPhone:', setupUrl);
+        function generateQRCode(emailAddress) {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ''; // Clear previous QR code
+            
+            // Create QR code content with email and instructions
+            const qrContent = `mailto:${emailAddress}?subject=Fridge Note&body=Type your note here and send!`;
+            
+            QRCode.toCanvas(qrContainer, qrContent, {
+                width: 200,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('QR Code generation failed:', error);
+                    document.getElementById('qrFallback').style.display = 'block';
+                    qrContainer.style.display = 'none';
+                } else {
+                    console.log('QR code generated successfully!');
+                    document.getElementById('qrFallback').style.display = 'none';
+                    qrContainer.style.display = 'block';
+                }
             });
         }
         
-        function goToFridge() {
-            // Redirect to fridge-specific URL
-            window.location.href = `/fridge/${fridgeId}`;
+        function copySetupUrl() {
+            const emailAddress = document.getElementById('fridgeEmail').textContent;
+            if (emailAddress && emailAddress !== 'Enter a fridge name first') {
+                navigator.clipboard.writeText(emailAddress).then(() => {
+                    alert('Email address copied! You can now send notes to this address.');
+                }).catch(() => {
+                    prompt('Copy this email address:', emailAddress);
+                });
+            }
         }
         
-        // Auto-redirect after 30 seconds if they don't click
-        setTimeout(() => {
-            if (confirm('Ready to go to your fridge notes?')) {
-                goToFridge();
+        function goToFridge() {
+            if (fridgeId) {
+                window.location.href = `/fridge/${fridgeId}`;
+            } else {
+                alert('Please enter a fridge name first!');
             }
-        }, 30000);
+        }
+        
+        // Load saved name if returning user
+        window.onload = function() {
+            const savedName = localStorage.getItem('fridgeName');
+            if (savedName) {
+                // Convert back to display format
+                const displayName = savedName.charAt(0).toUpperCase() + savedName.slice(1);
+                document.getElementById('fridgeNameInput').value = displayName;
+                updateFridgeSetup();
+            }
+        };
     </script>
 </body>
 </html>
