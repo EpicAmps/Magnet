@@ -7,24 +7,49 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse SendGrid webhook data (multipart/form-data)
+    // Handle both SendGrid and Zapier webhook formats
     const body = req.body;
     
-    // Extract email data from SendGrid webhook
-    const to = body.to || '';
-    const from = body.from || '';
-    const subject = body.subject || 'Untitled Note';
-    const text = body.text || body.html || '';
+    // Extract email data - support multiple formats
+    let to, from, subject, text;
     
-    console.log('Received email:', { to, from, subject });
-    
-    // Extract fridge name from email address (e.g., kitchen@magnet-mu.vercel.app)
-    const emailMatch = to.match(/^([^@]+)@/);
-    if (!emailMatch) {
-      return res.status(400).json({ error: 'Invalid email format' });
+    if (body.to && body.from) {
+      // SendGrid format
+      to = body.to;
+      from = body.from;
+      subject = body.subject || 'Untitled Note';
+      text = body.text || body.html || '';
+    } else if (body.envelope) {
+      // Zapier format
+      to = body.envelope.to;
+      from = body.envelope.from;
+      subject = body.subject || 'Untitled Note';
+      text = body['body-plain'] || body['body-html'] || body.text || '';
+    } else {
+      // Generic format - try common field names
+      to = body.to || body.recipient || body.email;
+      from = body.from || body.sender;
+      subject = body.subject || body.title || 'Untitled Note';
+      text = body.text || body.content || body.body || body.message || '';
     }
     
-    const fridgeName = emailMatch[1].toLowerCase();
+    console.log('Received email:', { to, from, subject, source: 'webhook' });
+    
+    // Extract fridge name from email address
+    // Support formats like: incoming.magnet+kitchen@gmail.com
+    let fridgeName;
+    const emailMatch = to.match(/incoming\.magnet\+([^@]+)@/);
+    if (emailMatch) {
+      fridgeName = emailMatch[1].toLowerCase();
+    } else {
+      // Fallback for other formats
+      const fallbackMatch = to.match(/(?:parser\+)?([^@+]+)/);
+      if (fallbackMatch) {
+        fridgeName = fallbackMatch[1].toLowerCase();
+      } else {
+        return res.status(400).json({ error: 'Could not extract fridge name from email' });
+      }
+    }
     
     // Generate fridge ID from name (consistent hashing)
     const fridgeId = generateFridgeId(fridgeName);
