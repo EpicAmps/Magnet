@@ -29,11 +29,29 @@ export default async function handler(req, res) {
       subject = body.subject || 'Untitled Note';
       text = body['body-plain'] || body['body-html'] || body.text || '';
     } else {
-      // Generic format - try common field names (including Pipedream's format)
+      // Generic format - try common field names (including Pipedream's Gmail format)
       to = body.to || body.recipient || body.email || body['To Address'];
       from = body.from || body.sender || body['From Address'];
       subject = body.subject || body.title || body['Email Subject'] || 'Untitled Note';
-      text = body.text || body.content || body.body || body.message || body['Email Content'] || '';
+      
+      // Try multiple sources for email content
+      text = body.text || 
+             body.content || 
+             body.body || 
+             body.message || 
+             body['Email Content'] || 
+             body.snippet ||  // Gmail snippet
+             (body.payload && body.payload.parts && body.payload.parts[0] && body.payload.parts[0].body && body.payload.parts[0].body.data) ||
+             '';
+             
+      // If we got base64 encoded data, decode it
+      if (text && typeof text === 'string' && text.match(/^[A-Za-z0-9+/=]+$/)) {
+        try {
+          text = Buffer.from(text, 'base64').toString('utf-8');
+        } catch (e) {
+          // If decode fails, use original
+        }
+      }
     }
     
     console.log('Extracted fields:', { to, from, subject, text: text.substring(0, 100) + '...' });
