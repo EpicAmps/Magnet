@@ -1,5 +1,5 @@
 import { put, head } from '@vercel/blob';
-import { parse } from 'querystring'; 
+import { parse } from 'querystring';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
