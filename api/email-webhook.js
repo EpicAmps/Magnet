@@ -16,7 +16,13 @@ export default async function handler(req, res) {
     // Debug: Log what we're receiving
     console.log('Webhook received data:', JSON.stringify(body, null, 2));
     
-    if (body.to && body.from) {
+    if (body.headers && body.headers.to) {
+      // New Pipedream Gmail format
+      to = body.headers.to;
+      from = body.headers.from;
+      subject = body.headers.subject || 'Untitled Note';
+      text = body.body || body.snippet || '';
+    } else if (body.to && body.from) {
       // SendGrid format
       to = body.to;
       from = body.from;
@@ -34,12 +40,13 @@ export default async function handler(req, res) {
       from = body.from || body.sender || body['From Address'];
       subject = body.subject || body.title || body['Email Subject'] || 'Untitled Note';
       
-      // Try multiple sources for email content
+      // Try multiple sources for email content (including Gmail's decodedContent)
       text = body.text || 
              body.content || 
              body.body || 
              body.message || 
              body['Email Content'] || 
+             body.decodedContent ||  // Gmail decoded content
              body.snippet ||  // Gmail snippet
              (body.payload && body.payload.parts && body.payload.parts[0] && body.payload.parts[0].body && body.payload.parts[0].body.data) ||
              '';
