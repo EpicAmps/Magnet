@@ -61,7 +61,12 @@ export default async function handler(req, res) {
       }
     }
     
-    console.log('Extracted fields:', { to, from, subject, text: text.substring(0, 100) + '...' });
+    console.log('Extracted fields:', { 
+      to, 
+      from, 
+      subject, 
+      text: text ? `"${text.substring(0, 50)}..." (length: ${text.length})` : 'EMPTY/NULL'
+    });
     
     console.log('Received email:', { to, from, subject, source: 'webhook' });
     
