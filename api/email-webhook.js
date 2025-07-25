@@ -13,6 +13,9 @@ export default async function handler(req, res) {
     // Extract email data - support multiple formats
     let to, from, subject, text;
     
+    // Debug: Log what we're receiving
+    console.log('Webhook received data:', JSON.stringify(body, null, 2));
+    
     if (body.to && body.from) {
       // SendGrid format
       to = body.to;
@@ -26,12 +29,14 @@ export default async function handler(req, res) {
       subject = body.subject || 'Untitled Note';
       text = body['body-plain'] || body['body-html'] || body.text || '';
     } else {
-      // Generic format - try common field names
-      to = body.to || body.recipient || body.email;
-      from = body.from || body.sender;
-      subject = body.subject || body.title || 'Untitled Note';
-      text = body.text || body.content || body.body || body.message || '';
+      // Generic format - try common field names (including Pipedream's format)
+      to = body.to || body.recipient || body.email || body['To Address'];
+      from = body.from || body.sender || body['From Address'];
+      subject = body.subject || body.title || body['Email Subject'] || 'Untitled Note';
+      text = body.text || body.content || body.body || body.message || body['Email Content'] || '';
     }
+    
+    console.log('Extracted fields:', { to, from, subject, text: text.substring(0, 100) + '...' });
     
     console.log('Received email:', { to, from, subject, source: 'webhook' });
     
