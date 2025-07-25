@@ -78,7 +78,14 @@ export default async function handler(req, res) {
     const fridgeId = generateFridgeId(fridgeName);
     
     // Create note content with email metadata
-    const noteContent = formatEmailAsNote(subject, text, from);
+    let noteContent;
+    
+    if (!text || text.trim() === '') {
+      // If no text content, use subject + fallback message
+      noteContent = subject + '\n\n(Email content could not be extracted)\n\nSent from: ' + from;
+    } else {
+      noteContent = formatEmailAsNote(subject, text, from);
+    }
     
     const noteData = {
       content: noteContent,
