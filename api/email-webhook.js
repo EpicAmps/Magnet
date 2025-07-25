@@ -15,6 +15,8 @@ export default async function handler(req, res) {
     
     // Debug: Log what we're receiving
     console.log('Webhook received data:', JSON.stringify(body, null, 2));
+    console.log('Body keys:', Object.keys(body));
+    console.log('Has headers?', !!body.headers);
     
     if (body.headers && body.headers.to) {
       // New Pipedream Gmail format
