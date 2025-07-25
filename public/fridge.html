@@ -255,7 +255,7 @@
                 console.log('Received notification:', data);
                 
                 if (data.type === 'note_updated') {
-                    document.getElementById('status').textContent = '📧 New email received! Refreshing...';
+                    document.getElementById('status').textContent = `📧 New email from ${data.fridgeName || 'unknown'}! Refreshing...`;
                     fetchNote();
                 } else if (data.type === 'connected') {
                     document.getElementById('status').textContent = data.message;
@@ -277,18 +277,23 @@
                 const data = await response.json();
                 
                 if (data.timestamp > lastUpdate) {
-                    const content = data.content || 'No notes yet for this fridge.';
-                    document.getElementById('noteContent').innerHTML = 
-                        content.includes('No notes yet') ? 
-                        '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>' :
-                        content.replace(/\n/g, '<br>');
+                    const content = data.content || 'No content received';
+                    
+                    // Show better status messages
+                    if (content.includes('No notes yet')) {
+                        document.getElementById('noteContent').innerHTML = 
+                            '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>';
+                        document.getElementById('status').textContent = '⏳ No notes received yet. Send an email to test!';
+                    } else {
+                        document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
+                        document.getElementById('status').textContent = `✅ New note received! From: ${data.sender || 'Unknown'}`;
+                    }
                     
                     document.getElementById('timestamp').textContent = 
                         `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
                     lastUpdate = data.timestamp;
-                    
-                    document.getElementById('status').textContent = 
-                        '✅ Note updated! Ready for next update...';
+                } else {
+                    document.getElementById('status').textContent = '🔄 Checking for updates...';
                 }
             } catch (error) {
                 console.error('Error fetching note:', error);
@@ -300,11 +305,13 @@
             window.location.href = '/setup.html';
         }
         
-        // Initialize
-        if (fridgeId) {
-            connectToNotifications();
-            fetchNote();
-        }
+        // TEMP: Disable real-time connection to avoid timeouts
+        // connectToNotifications();
+        console.log('Real-time updates disabled - use manual refresh');
+        
+        // Fetch note immediately and every 30 seconds
+        fetchNote();
+        setInterval(fetchNote, 30000);
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
