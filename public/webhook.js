@@ -1,9 +1,8 @@
-// This endpoint should not require OIDC authentication
 export default async function handler(req, res) {
   // Allow CORS for external webhooks
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Webhook-Secret');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -14,11 +13,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Add a simple security check (optional)
+    // Optional: Check webhook secret for security
     const expectedSecret = process.env.WEBHOOK_SECRET;
-    const providedSecret = req.headers['x-webhook-secret'] || req.body.secret;
+    const providedSecret = req.headers['x-webhook-secret'];
     
     if (expectedSecret && providedSecret !== expectedSecret) {
+      console.log('Invalid webhook secret provided');
       return res.status(401).json({ error: 'Invalid webhook secret' });
     }
 
@@ -26,12 +26,18 @@ export default async function handler(req, res) {
     const emailData = req.body;
     console.log('Processing email webhook:', emailData);
     
-    // Your email processing logic here
-    // Save to database, create note, etc.
+    // TODO: Add your email processing logic here
+    // This should match what your old email-webhook.js was doing:
+    // - Extract email content, subject, sender
+    // - Save to Vercel Blob storage
+    // - Trigger any real-time updates
     
     return res.status(200).json({ 
       success: true, 
-      message: 'Email processed successfully' 
+      message: 'Email processed successfully',
+      fridgeName: emailData.fridgeName,
+      fridgeId: emailData.fridgeId,
+      timestamp: Date.now()
     });
   } catch (error) {
     console.error('Webhook error:', error);
