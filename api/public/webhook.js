@@ -1,7 +1,7 @@
-import { put, head } from '@vercel/blob';
-import { parse } from 'querystring';
+const { put, head } = require('@vercel/blob');
+const { parse } = require('querystring');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Allow CORS for external webhooks
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -22,19 +22,6 @@ export default async function handler(req, res) {
     
     if (expectedSecret && providedSecret !== expectedSecret) {
       console.log('Invalid webhook secret provided');
-      return res.status(401).json({ error: 'Invalid webhook secret' });
-    }
-
-    // Debug: Log secrets for troubleshooting
-    const expectedSecret = process.env.WEBHOOK_SECRET;
-    const providedSecret = req.headers['x-webhook-secret'];
-    
-    console.log('Expected secret:', expectedSecret ? 'SET' : 'NOT SET');
-    console.log('Provided secret:', providedSecret ? 'PROVIDED' : 'NOT PROVIDED');
-    console.log('Headers received:', Object.keys(req.headers));
-    
-    if (expectedSecret && providedSecret !== expectedSecret) {
-      console.log('Secret mismatch!');
       return res.status(401).json({ error: 'Invalid webhook secret' });
     }
 
@@ -151,8 +138,8 @@ export default async function handler(req, res) {
     });
     
     // Notify connected fridges
-    const { notifyFridges } = await import('../ping.js');  // Fixed path
-      notifyFridges('note_updated', { 
+    const { notifyFridges } = await import('./ping.js');
+    notifyFridges('note_updated', { 
       message: `New email from ${from}`,
       noteId: noteData.id,
       fridgeId: fridgeId,
