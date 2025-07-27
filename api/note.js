@@ -1,4 +1,4 @@
-import { put, head, get } from '@vercel/blob';
+import { put, head, get, list } from '@vercel/blob';
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -61,17 +61,16 @@ export default async function handler(req, res) {
       }
       
       try {
-        // Try to fetch the note from blob storage
-        const blobKey = `fridge-${fridgeId}.json`;
-        console.log('Attempting to fetch blob key:', blobKey);
+        // Find the blob by prefix since Vercel adds random suffixes
+        const blobPrefix = `fridge-${fridgeId}`;
+        console.log('Searching for blobs with prefix:', blobPrefix);
         
-        // Check if blob exists first
-        try {
-          await head(blobKey);
-          console.log('Blob exists, fetching content...');
-        } catch (headError) {
-          console.log('Blob does not exist for:', blobKey);
-          // Blob doesn't exist, return default message
+        // List all blobs that start with our prefix
+        const { blobs } = await list({ prefix: blobPrefix });
+        console.log('Found blobs:', blobs.map(b => b.pathname));
+        
+        if (blobs.length === 0) {
+          console.log('No blobs found with prefix:', blobPrefix);
           return res.json({ 
             content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
             timestamp: Date.now(),
@@ -80,16 +79,20 @@ export default async function handler(req, res) {
           });
         }
         
-        // Fetch the blob content using Vercel Blob's get() function
-        const blob = await get(blobKey);
-        if (!blob) {
-          throw new Error('Blob not found');
+        // Get the most recent blob (in case there are multiple)
+        const mostRecentBlob = blobs.sort((a, b) => 
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        )[0];
+        
+        console.log('Using most recent blob:', mostRecentBlob.pathname);
+        
+        // Fetch the blob content
+        const response = await fetch(mostRecentBlob.url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch blob: ${response.status}`);
         }
         
-        // Read the blob content
-        const text = await blob.text();
-        const note = JSON.parse(text);
-        
+        const note = await response.json();
         console.log('Successfully retrieved note:', note);
         return res.json(note);
         
