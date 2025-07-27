@@ -177,7 +177,7 @@ module.exports = async function handler(req, res) {
 function generateFridgeId(fridgeName) {
   // Simple hash function for consistent ID generation
   let hash = 0;
-  for (let i < fridgeName.length; i++) {
+  for (let i = 0; i < fridgeName.length; i++) {
     const char = fridgeName.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
