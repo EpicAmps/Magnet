@@ -1,4 +1,4 @@
-import { put, head } from '@vercel/blob';
+import { put, head, get } from '@vercel/blob';
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-
+  
   try {
     if (req.method === 'POST') {
       // iOS Shortcut posting new note
@@ -22,14 +22,14 @@ export default async function handler(req, res) {
       if (!fridgeId) {
         return res.status(400).json({ error: 'Fridge ID is required' });
       }
-
+      
       const noteData = {
         content,
         timestamp: Date.now(),
         id: `note_${Date.now()}`,
         fridgeId
       };
-
+      
       // Save to Vercel Blob with fridge-specific filename
       const blobKey = `fridge-${fridgeId}.json`;
       await put(blobKey, JSON.stringify(noteData), {
@@ -63,12 +63,14 @@ export default async function handler(req, res) {
       try {
         // Try to fetch the note from blob storage
         const blobKey = `fridge-${fridgeId}.json`;
-        const blobUrl = `${process.env.BLOB_READ_WRITE_TOKEN ? 'https://' + process.env.VERCEL_URL : window.location.origin}/api/blob/${blobKey}`;
+        console.log('Attempting to fetch blob key:', blobKey);
         
         // Check if blob exists first
         try {
           await head(blobKey);
+          console.log('Blob exists, fetching content...');
         } catch (headError) {
+          console.log('Blob does not exist for:', blobKey);
           // Blob doesn't exist, return default message
           return res.json({ 
             content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
@@ -78,23 +80,28 @@ export default async function handler(req, res) {
           });
         }
         
-        // Fetch the blob content
-        const response = await fetch(blobUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch blob: ${response.status}`);
+        // Fetch the blob content using Vercel Blob's get() function
+        const blob = await get(blobKey);
+        if (!blob) {
+          throw new Error('Blob not found');
         }
         
-        const note = await response.json();
+        // Read the blob content
+        const text = await blob.text();
+        const note = JSON.parse(text);
+        
+        console.log('Successfully retrieved note:', note);
         return res.json(note);
         
       } catch (error) {
         console.error('Error fetching from blob:', error);
         // Return default if blob fetch fails
         return res.json({ 
-          content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
+          content: `Error loading notes for fridge ${fridgeId}. Please try again.`,
           timestamp: Date.now(),
-          id: 'default',
-          fridgeId: fridgeId
+          id: 'error',
+          fridgeId: fridgeId,
+          error: error.message
         });
       }
       
