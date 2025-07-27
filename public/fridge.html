@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fridge Notes</title>
+    <title>Magnet Notes</title>
     <style>
         * {
             margin: 0;
@@ -35,6 +35,19 @@
             align-items: center;
             margin-bottom: 30px;
             flex-wrap: wrap;
+        }
+        
+        .app-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .magnet-logo {
+            width: 60px;
+            height: 60px;
+            font-size: 60px;
+            line-height: 1;
         }
         
         h1 {
@@ -164,7 +177,10 @@
     
     <div class="container">
         <div class="header">
-            <h1>🏠 Fridge Notes</h1>
+            <div class="app-title">
+                <div class="magnet-logo">🧲</div>
+                <h1>Magnet Notes</h1>
+            </div>
             <div class="fridge-info">
                 <div><strong>📧 Email:</strong> <span id="fridgeEmailDisplay">Loading...</span></div>
                 <div><strong>🆔 ID:</strong> <span id="fridgeIdDisplay">Loading...</span></div>
