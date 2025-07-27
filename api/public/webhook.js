@@ -25,6 +25,19 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Invalid webhook secret' });
     }
 
+    // Debug: Log secrets for troubleshooting
+    const expectedSecret = process.env.WEBHOOK_SECRET;
+    const providedSecret = req.headers['x-webhook-secret'];
+    
+    console.log('Expected secret:', expectedSecret ? 'SET' : 'NOT SET');
+    console.log('Provided secret:', providedSecret ? 'PROVIDED' : 'NOT PROVIDED');
+    console.log('Headers received:', Object.keys(req.headers));
+    
+    if (expectedSecret && providedSecret !== expectedSecret) {
+      console.log('Secret mismatch!');
+      return res.status(401).json({ error: 'Invalid webhook secret' });
+    }
+
     // Handle both SendGrid and Pipedream webhook formats
     const body = req.body;
     
