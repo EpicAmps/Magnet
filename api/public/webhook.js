@@ -146,7 +146,7 @@ module.exports = async function handler(req, res) {
     });
     
     // Notify connected fridges (fixed import)
-    const { notifyFridges } = require('../ping.js');
+    const { notifyFridges } = require('./ping.js');
     notifyFridges('note_updated', { 
       message: `New email from ${from}`,
       noteId: noteData.id,
