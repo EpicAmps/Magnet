@@ -36,8 +36,16 @@ module.exports = async function handler(req, res) {
     console.log('Body keys:', Object.keys(body));
     console.log('Has headers?', !!body.headers);
     
-    if (body.headers && body.headers.to) {
-      // New Pipedream Gmail format
+    // Handle Pipedream's direct format (which you're receiving)
+    if (body.to && body.from && body.body) {
+      // Direct Pipedream format - this matches your logs
+      to = body.to;
+      from = body.from;
+      subject = body.subject || 'Untitled Note';
+      text = body.body; // Use body.body directly
+      console.log('Using direct Pipedream format');
+    } else if (body.headers && body.headers.to) {
+      // Pipedream Gmail headers format
       to = body.headers.to;
       from = body.headers.from;
       subject = body.headers.subject || 'Untitled Note';
@@ -47,7 +55,7 @@ module.exports = async function handler(req, res) {
       to = body.to;
       from = body.from;
       subject = body.subject || 'Untitled Note';
-      text = body.text || body.html || '';
+      text = body.text || body.html || body.body || '';
     } else if (body.envelope) {
       // Zapier format
       to = body.envelope.to;
@@ -55,15 +63,15 @@ module.exports = async function handler(req, res) {
       subject = body.subject || 'Untitled Note';
       text = body['body-plain'] || body['body-html'] || body.text || '';
     } else {
-      // Generic format - try common field names (including Pipedream's Gmail format)
+      // Generic format - try common field names
       to = body.to || body.recipient || body.email || body['To Address'];
       from = body.from || body.sender || body['From Address'];
       subject = body.subject || body.title || body['Email Subject'] || 'Untitled Note';
       
-      // Try multiple sources for email content (including Gmail's decodedContent)
-      text = body.text || 
+      // Try multiple sources for email content
+      text = body.body ||  // Try body.body first (Pipedream uses this)
+             body.text || 
              body.content || 
-             body.body || 
              body.message || 
              body['Email Content'] || 
              body.decodedContent ||  // Gmail decoded content
@@ -137,8 +145,8 @@ module.exports = async function handler(req, res) {
       contentType: 'application/json'
     });
     
-    // Notify connected fridges
-    const { notifyFridges } = await import('./ping.js');
+    // Notify connected fridges (fixed import)
+    const { notifyFridges } = require('../ping.js');
     notifyFridges('note_updated', { 
       message: `New email from ${from}`,
       noteId: noteData.id,
@@ -169,7 +177,7 @@ module.exports = async function handler(req, res) {
 function generateFridgeId(fridgeName) {
   // Simple hash function for consistent ID generation
   let hash = 0;
-  for (let i = 0; i < fridgeName.length; i++) {
+  for (let i < fridgeName.length; i++) {
     const char = fridgeName.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
