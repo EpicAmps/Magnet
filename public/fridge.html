@@ -172,7 +172,7 @@
         </div>
         
         <div class="status" id="status">
-            Connecting to notification service...
+            Starting hybrid notification system...
         </div>
         
         <div class="note-content" id="noteContent">
@@ -199,6 +199,10 @@
         let lastUpdate = 0;
         let fridgeId = null;
         let fridgeName = null;
+        let lastSSEMessage = Date.now();
+        let isSSEWorking = false;
+        let pollingInterval = null;
+        let lastManualCheck = 0;
         
         // Get fridge ID from URL parameter or localStorage
         const urlParams = new URLSearchParams(window.location.search);
@@ -225,13 +229,13 @@
         
         const API_BASE = window.location.origin;
         
-        function updateConnectionStatus(connected) {
+        function updateConnectionStatus(connected, method = '') {
             const status = document.getElementById('connectionStatus');
             if (connected) {
-                status.textContent = '🟢 Connected';
+                status.textContent = method ? `🟢 ${method}` : '🟢 Connected';
                 status.className = 'connection-status connected';
             } else {
-                status.textContent = '🔴 Disconnected';
+                status.textContent = '🔴 Connecting...';
                 status.className = 'connection-status disconnected';
             }
         }
@@ -246,16 +250,22 @@
             
             eventSource.onopen = () => {
                 console.log('Connected to notification service for fridge:', fridgeId);
-                updateConnectionStatus(true);
-                document.getElementById('status').textContent = '✅ Connected! Waiting for email updates...';
+                isSSEWorking = true;
+                lastSSEMessage = Date.now();
+                updateConnectionStatus(true, 'Real-time');
+                document.getElementById('status').textContent = '✅ Real-time connection established! Waiting for email updates...';
             };
             
             eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
-                console.log('Received notification:', data);
+                console.log('Received SSE notification:', data);
+                
+                // Update SSE health tracking
+                isSSEWorking = true;
+                lastSSEMessage = Date.now();
                 
                 if (data.type === 'note_updated') {
-                    document.getElementById('status').textContent = `📧 New email from ${data.fridgeName || 'unknown'}! Refreshing...`;
+                    document.getElementById('status').textContent = `📧 New email received instantly! From: ${data.fridgeName || 'unknown'}`;
                     fetchNote();
                 } else if (data.type === 'connected') {
                     document.getElementById('status').textContent = data.message;
@@ -264,40 +274,93 @@
             
             eventSource.onerror = (error) => {
                 console.error('SSE Error:', error);
+                isSSEWorking = false;
                 updateConnectionStatus(false);
-                document.getElementById('status').textContent = '❌ Connection lost. Retrying in 5 seconds...';
+                document.getElementById('status').textContent = '❌ Real-time connection lost. Using backup polling...';
                 
-                setTimeout(connectToNotifications, 5000);
+                // Retry SSE connection in 10 seconds
+                setTimeout(connectToNotifications, 10000);
             };
+        }
+        
+        function startPollingBackup() {
+            // Poll every 2 minutes as backup
+            pollingInterval = setInterval(() => {
+                const timeSinceLastSSE = Date.now() - lastSSEMessage;
+                const timeSinceLastManualCheck = Date.now() - lastManualCheck;
+                
+                // Only poll if:
+                // 1. SSE hasn't worked in the last 3 minutes, AND
+                // 2. We haven't manually checked in the last minute
+                if (timeSinceLastSSE > 180000 && timeSinceLastManualCheck > 60000) {
+                    console.log('SSE down, polling for updates...');
+                    fetchNoteViaPolling();
+                }
+            }, 120000); // Check every 2 minutes
+        }
+        
+        async function fetchNoteViaPolling() {
+            try {
+                const response = await fetch(`${API_BASE}/api/note?fridgeId=${fridgeId}`);
+                const data = await response.json();
+                
+                if (data.timestamp > lastUpdate) {
+                    console.log('Found new note via polling!');
+                    document.getElementById('status').textContent = '📧 New email found via backup check!';
+                    updateNoteDisplay(data);
+                } else {
+                    // No new notes, but polling is working
+                    updateConnectionStatus(true, 'Polling');
+                }
+                
+                lastManualCheck = Date.now();
+            } catch (error) {
+                console.error('Polling error:', error);
+                updateConnectionStatus(false);
+            }
         }
         
         async function fetchNote() {
             try {
                 const response = await fetch(`${API_BASE}/api/note?fridgeId=${fridgeId}`);
                 const data = await response.json();
+                updateNoteDisplay(data);
                 
-                if (data.timestamp > lastUpdate) {
-                    const content = data.content || 'No content received';
-                    
-                    // Show better status messages
-                    if (content.includes('No notes yet')) {
-                        document.getElementById('noteContent').innerHTML = 
-                            '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>';
-                        document.getElementById('status').textContent = '⏳ No notes received yet. Send an email to test!';
-                    } else {
-                        document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
-                        document.getElementById('status').textContent = `✅ New note received! From: ${data.sender || 'Unknown'}`;
-                    }
-                    
-                    document.getElementById('timestamp').textContent = 
-                        `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
-                    lastUpdate = data.timestamp;
-                } else {
-                    document.getElementById('status').textContent = '🔄 Checking for updates...';
-                }
+                // Show that manual refresh worked
+                updateConnectionStatus(true, 'Manual');
+                lastManualCheck = Date.now();
             } catch (error) {
                 console.error('Error fetching note:', error);
                 document.getElementById('status').textContent = '❌ Error loading note';
+                updateConnectionStatus(false);
+            }
+        }
+        
+        function updateNoteDisplay(data) {
+            if (data.timestamp > lastUpdate) {
+                const content = data.content || 'No content received';
+                
+                // Show better status messages
+                if (content.includes('No notes yet')) {
+                    document.getElementById('noteContent').innerHTML = 
+                        '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>';
+                    document.getElementById('status').textContent = '⏳ No notes received yet. Send an email to test!';
+                } else {
+                    document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
+                    
+                    // Update status based on how we got the update
+                    if (isSSEWorking && (Date.now() - lastSSEMessage) < 60000) {
+                        document.getElementById('status').textContent = `✅ Real-time update! From: ${data.sender || 'Unknown'}`;
+                    } else {
+                        document.getElementById('status').textContent = `✅ Email received! From: ${data.sender || 'Unknown'}`;
+                    }
+                }
+                
+                document.getElementById('timestamp').textContent = 
+                    `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+                lastUpdate = data.timestamp;
+            } else {
+                document.getElementById('status').textContent = '🔄 Checking for updates...';
             }
         }
         
@@ -305,18 +368,27 @@
             window.location.href = '/setup.html';
         }
         
-        // TEMP: Disable real-time connection to avoid timeouts
-        // connectToNotifications();
-        console.log('Real-time updates disabled - use manual refresh');
-        
-        // Fetch note immediately and every 30 seconds
-        fetchNote();
-        setInterval(fetchNote, 30000);
+        // Initialize hybrid system
+        if (fridgeId) {
+            console.log('Starting hybrid notification system...');
+            
+            // Start real-time connection
+            connectToNotifications();
+            
+            // Start polling backup
+            startPollingBackup();
+            
+            // Initial note fetch
+            fetchNote();
+        }
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (eventSource) {
                 eventSource.close();
+            }
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
             }
         });
     </script>
