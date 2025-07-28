@@ -1,7 +1,15 @@
-const { put, head } = require('@vercel/blob');
-const { parse } = require('querystring');
+import { put, head } from '@vercel/blob';
+import { parse } from 'querystring';
+import { marked } from 'marked';
 
-module.exports = async function handler(req, res) {
+// Configure marked for fridge-friendly output
+marked.setOptions({
+  breaks: true,        // Convert \n to <br>
+  gfm: true,          // GitHub Flavored Markdown
+  sanitize: false,    // Allow HTML (we trust our own emails)
+});
+
+export default async function handler(req, res) {
   // Allow CORS for external webhooks
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -138,15 +146,19 @@ module.exports = async function handler(req, res) {
       subject
     };
 
-    // Save to Vercel Blob
+    // Save to Vercel Blob (exact same format as original)
     const blobKey = `fridge-${fridgeId}.json`;
     await put(blobKey, JSON.stringify(noteData), {
       access: 'public',
       contentType: 'application/json'
     });
     
-    // Notify connected fridges (fixed import)
-    const { notifyFridges } = require('./ping.js');
+    // Debug: Log what we saved
+    console.log('Saved to blob key:', blobKey);
+    console.log('Saved note data:', JSON.stringify(noteData, null, 2));
+    
+    // Notify connected fridges (ES6 import)
+    const { notifyFridges } = await import('./ping.js');
     notifyFridges('note_updated', { 
       message: `New email from ${from}`,
       noteId: noteData.id,
@@ -173,7 +185,7 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Generate consistent fridge ID from name
+// Generate consistent fridge ID from name (exact same as original)
 function generateFridgeId(fridgeName) {
   // Simple hash function for consistent ID generation
   let hash = 0;
@@ -188,13 +200,73 @@ function generateFridgeId(fridgeName) {
   return (baseId + '000000000000').substring(0, 12);
 }
 
-// Format email content as a nice note
+// Detect if content contains markdown and format accordingly
+function detectMarkdown(text) {
+  // Simple heuristics to detect markdown
+  const markdownPatterns = [
+    /^#{1,6}\s/m,           // Headers
+    /^\s*[-*+]\s/m,         // Bullet lists
+    /^\s*\d+\.\s/m,         // Numbered lists
+    /^\s*- \[[ x]\]/m,      // Checkboxes
+    /\*\*.*?\*\*/,          // Bold
+    /\*.*?\*/,              // Italic
+    /`.*?`/,                // Code
+    /^\s*>/m,               // Blockquotes
+  ];
+  
+  return markdownPatterns.some(pattern => pattern.test(text));
+}
+
+// Format email content as a nice note with markdown support
 function formatEmailAsNote(subject, text, from) {
-  // Clean up the text content
+  // Clean up the text content first
   let cleanText = text
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
     .replace(/\r\n/g, '\n')   // Normalize line endings
     .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks
+    .trim();
+  
+  // Check if content looks like markdown
+  const isMarkdown = detectMarkdown(cleanText);
+  
+  console.log('Content appears to be markdown:', isMarkdown);
+  
+  let formattedContent;
+  
+  if (isMarkdown) {
+    // Process as markdown
+    try {
+      // Add subject as header if not already in content
+      if (subject && !cleanText.toLowerCase().includes(subject.toLowerCase())) {
+        cleanText = `# ${subject}\n\n${cleanText}`;
+      }
+      
+      // Convert markdown to HTML
+      formattedContent = marked(cleanText);
+      
+      // Add sender attribution
+      if (from && !cleanText.includes(from)) {
+        formattedContent += `<p class="sender-attribution">— ${from}</p>`;
+      }
+      
+      console.log('Processed as markdown, HTML length:', formattedContent.length);
+      
+    } catch (error) {
+      console.error('Markdown processing error:', error);
+      // Fallback to plain text processing
+      formattedContent = processAsPlainText(subject, cleanText, from);
+    }
+  } else {
+    // Process as plain text
+    formattedContent = processAsPlainText(subject, cleanText, from);
+  }
+  
+  return formattedContent;
+}
+
+// Fallback plain text processing
+function processAsPlainText(subject, text, from) {
+  let cleanText = text
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
     .trim();
   
   // If subject exists and isn't already in the text, add it as a header
