@@ -207,7 +207,8 @@ function detectMarkdown(text) {
     /^#{1,6}\s/m,           // Headers
     /^\s*[-*+]\s/m,         // Bullet lists
     /^\s*\d+\.\s/m,         // Numbered lists
-    /^\s*- \[[ x]\]/m,      // Checkboxes
+    /^\s*- \[[ x]\]/m,      // Standard checkboxes
+    /☐|✓|✅|☑/,            // Apple Notes checkboxes
     /\*\*.*?\*\*/,          // Bold
     /\*.*?\*/,              // Italic
     /`.*?`/,                // Code
@@ -235,6 +236,13 @@ function formatEmailAsNote(subject, text, from) {
   if (isMarkdown) {
     // Process as markdown
     try {
+      // Convert Apple Notes checkboxes to standard markdown checkboxes
+      cleanText = cleanText
+        .replace(/☐\s*/g, '- [ ] ')     // Empty checkbox
+        .replace(/✓\s*/g, '- [x] ')     // Checked (checkmark)
+        .replace(/✅\s*/g, '- [x] ')     // Checked (green check)
+        .replace(/☑\s*/g, '- [x] ');    // Checked (ballot box)
+      
       // Add subject as header if not already in content
       if (subject && !cleanText.toLowerCase().includes(subject.toLowerCase())) {
         cleanText = `# ${subject}\n\n${cleanText}`;
