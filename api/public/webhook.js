@@ -227,34 +227,36 @@ function formatEmailAsNote(subject, text, from) {
     .replace(/\n{3,}/g, '\n\n') // Remove excessive line breaks
     .trim();
   
-  // Check if content looks like markdown
-  const isMarkdown = detectMarkdown(cleanText);
+  // PRE-PROCESS: Convert Apple Notes format BEFORE markdown detection
+  let processedText = cleanText
+    .replace(/\t◦\t/g, '- [ ] ')    // Apple Notes bullets to unchecked boxes
+    .replace(/☐\s*/g, '- [ ] ')     // Empty checkbox symbols
+    .replace(/✓\s*/g, '- [x] ')     // Checked (checkmark)
+    .replace(/✅\s*/g, '- [x] ')     // Checked (green check)
+    .replace(/☑\s*/g, '- [x] ');    // Checked (ballot box)
+  
+  // Check if content looks like markdown (AFTER Apple Notes conversion)
+  const isMarkdown = detectMarkdown(processedText);
   
   console.log('Content appears to be markdown:', isMarkdown);
+  console.log('Original text snippet:', cleanText.substring(0, 100));
+  console.log('Processed text snippet:', processedText.substring(0, 100));
   
   let formattedContent;
   
   if (isMarkdown) {
     // Process as markdown
     try {
-      // Convert Apple Notes format to markdown checkboxes
-      cleanText = cleanText
-        .replace(/\t◦\t/g, '- [ ] ')    // Apple Notes bullets to unchecked boxes
-        .replace(/☐\s*/g, '- [ ] ')     // Empty checkbox symbols
-        .replace(/✓\s*/g, '- [x] ')     // Checked (checkmark)
-        .replace(/✅\s*/g, '- [x] ')     // Checked (green check)
-        .replace(/☑\s*/g, '- [x] ');    // Checked (ballot box)
-      
       // Add subject as header if not already in content
-      if (subject && !cleanText.toLowerCase().includes(subject.toLowerCase())) {
-        cleanText = `# ${subject}\n\n${cleanText}`;
+      if (subject && !processedText.toLowerCase().includes(subject.toLowerCase())) {
+        processedText = `# ${subject}\n\n${processedText}`;
       }
       
       // Convert markdown to HTML
-      formattedContent = marked(cleanText);
+      formattedContent = marked(processedText);
       
       // Add sender attribution
-      if (from && !cleanText.includes(from)) {
+      if (from && !processedText.includes(from)) {
         formattedContent += `<p class="sender-attribution">— ${from}</p>`;
       }
       
