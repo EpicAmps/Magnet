@@ -123,11 +123,23 @@
             transform: scale(1.8);
             margin-right: 15px;
             cursor: pointer;
+            vertical-align: middle;
         }
         
-        .note-content li:has(input[type="checkbox"]) {
+        /* Task list items - more compatible approach */
+        .note-content li {
+            margin: 12px 0;
+            font-size: 1.4rem;
+            line-height: 1.5;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        /* Remove default list bullets for checkbox items */
+        .note-content ul {
             list-style: none;
-            margin-left: -20px;
+            padding-left: 20px;
         }
         
         /* Bold and italic text */
