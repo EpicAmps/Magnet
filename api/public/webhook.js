@@ -209,6 +209,7 @@ function detectMarkdown(text) {
     /^\s*\d+\.\s/m,         // Numbered lists
     /^\s*- \[[ x]\]/m,      // Standard checkboxes
     /☐|✓|✅|☑/,            // Apple Notes checkboxes
+    /\t◦\t/,               // Apple Notes bullet format
     /\*\*.*?\*\*/,          // Bold
     /\*.*?\*/,              // Italic
     /`.*?`/,                // Code
@@ -236,9 +237,10 @@ function formatEmailAsNote(subject, text, from) {
   if (isMarkdown) {
     // Process as markdown
     try {
-      // Convert Apple Notes checkboxes to standard markdown checkboxes
+      // Convert Apple Notes format to markdown checkboxes
       cleanText = cleanText
-        .replace(/☐\s*/g, '- [ ] ')     // Empty checkbox
+        .replace(/\t◦\t/g, '- [ ] ')    // Apple Notes bullets to unchecked boxes
+        .replace(/☐\s*/g, '- [ ] ')     // Empty checkbox symbols
         .replace(/✓\s*/g, '- [x] ')     // Checked (checkmark)
         .replace(/✅\s*/g, '- [x] ')     // Checked (green check)
         .replace(/☑\s*/g, '- [x] ');    // Checked (ballot box)
@@ -256,7 +258,8 @@ function formatEmailAsNote(subject, text, from) {
         formattedContent += `<p class="sender-attribution">— ${from}</p>`;
       }
       
-      console.log('Processed as markdown, HTML length:', formattedContent.length);
+      console.log('Processed as markdown, converted Apple Notes format');
+      console.log('Final HTML length:', formattedContent.length);
       
     } catch (error) {
       console.error('Markdown processing error:', error);
