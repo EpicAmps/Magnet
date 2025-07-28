@@ -44,8 +44,8 @@
         }
         
         .magnet-logo {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             object-fit: contain;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
         }
@@ -84,19 +84,112 @@
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
         }
         
-        .note-content h1, .note-content h2, .note-content h3 {
+        /* Markdown-specific styling for fridge display */
+        .note-content h1 {
             color: #2c3e50;
-            margin: 10px 0;
+            font-size: 2.2rem;
+            margin: 20px 0 15px 0;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .note-content h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin: 18px 0 12px 0;
+            border-bottom: 2px solid #95a5a6;
+            padding-bottom: 5px;
+        }
+        
+        .note-content h3 {
+            color: #2c3e50;
+            font-size: 1.6rem;
+            margin: 15px 0 10px 0;
         }
         
         .note-content ul, .note-content ol {
             margin: 15px 0;
-            padding-left: 30px;
+            padding-left: 40px;
         }
         
         .note-content li {
-            margin: 8px 0;
-            font-size: 1.3rem;
+            margin: 12px 0;
+            font-size: 1.4rem;
+            line-height: 1.5;
+        }
+        
+        /* Checkbox styling for task lists */
+        .note-content input[type="checkbox"] {
+            transform: scale(1.8);
+            margin-right: 15px;
+            cursor: pointer;
+        }
+        
+        .note-content li:has(input[type="checkbox"]) {
+            list-style: none;
+            margin-left: -20px;
+        }
+        
+        /* Bold and italic text */
+        .note-content strong {
+            color: #2c3e50;
+            font-weight: 700;
+        }
+        
+        .note-content em {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        /* Code blocks and inline code */
+        .note-content code {
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+        }
+        
+        .note-content pre {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .note-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        /* Blockquotes */
+        .note-content blockquote {
+            border-left: 5px solid #3498db;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #ecf0f1;
+            font-style: italic;
+        }
+        
+        /* Sender attribution styling */
+        .note-content .sender-attribution {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #bdc3c7;
+            color: #7f8c8d;
+            font-style: italic;
+            text-align: right;
+            font-size: 1.2rem;
+        }
+        
+        /* Horizontal rules */
+        .note-content hr {
+            border: none;
+            border-top: 2px solid #bdc3c7;
+            margin: 25px 0;
         }
         
         .controls {
@@ -178,7 +271,7 @@
     <div class="container">
         <div class="header">
             <div class="app-title">
-                <img src="/magnet-logo-wht.png" alt="Magnet" class="magnet-logo">
+                <img src="/magnet-logo.png" alt="Magnet" class="magnet-logo">
                 <h1>Magnet Notes</h1>
             </div>
             <div class="fridge-info">
@@ -364,7 +457,14 @@
                         '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>';
                     document.getElementById('status').textContent = '⏳ No notes received yet. Send an email to test!';
                 } else {
-                    document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
+                    // Display HTML content (from markdown) or plain text
+                    if (content.includes('<') && content.includes('>')) {
+                        // Content contains HTML (from markdown processing)
+                        document.getElementById('noteContent').innerHTML = content;
+                    } else {
+                        // Plain text content
+                        document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
+                    }
                     
                     // Update status based on how we got the update
                     document.getElementById('status').textContent = `📧 New note from ${data.sender || 'someone'}!`;
