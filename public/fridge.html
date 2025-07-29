@@ -753,7 +753,11 @@ function goToSetup() {
         <div class="timestamp" id="timestamp"></div>
     </div>
 
-    <script>
+    <script type="text/javascript">
+        // Samsung Family Hub compatibility fixes
+        'use strict';
+        
+        // Variables
         let eventSource = null;
         let lastUpdate = 0;
         let fridgeId = null;
@@ -771,7 +775,10 @@ function goToSetup() {
         const urlParams = new URLSearchParams(window.location.search);
         fridgeId = urlParams.get('id') || getFromPath() || localStorage.getItem('fridgeId');
         fridgeName = localStorage.getItem('fridgeName');
-        
+    </script>
+    
+    <script type="text/javascript">
+        // Helper functions
         function getFromPath() {
             // Extract ID from paths like /fridge/abc123
             const pathParts = window.location.pathname.split('/');
@@ -788,7 +795,7 @@ function goToSetup() {
         // Update display with fridge info
         if (fridgeId && fridgeName) {
             document.getElementById('fridgeIdInfo').textContent = fridgeId;
-            document.getElementById('fridgeEmailInfo').textContent = `incoming.magnet+${fridgeName}@gmail.com`;
+            document.getElementById('fridgeEmailInfo').textContent = 'incoming.magnet+' + fridgeName + '@gmail.com';
         } else {
             // Redirect to setup if no fridge info
             window.location.href = '/setup.html';
@@ -798,7 +805,10 @@ function goToSetup() {
             const popup = document.getElementById('infoPopup');
             popup.classList.toggle('show');
         }
-        
+    </script>
+    
+    <script type="text/javascript">
+        // Countdown and status functions
         function updateCountdown() {
             const now = Date.now();
             const timeSinceLastCheck = Math.floor((now - lastPollingCheck) / 1000);
@@ -808,7 +818,7 @@ function goToSetup() {
                 const minutes = Math.floor(timeUntilNext / 60);
                 const seconds = timeUntilNext % 60;
                 document.getElementById('countdown').textContent = 
-                    ` • Next check in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    ' • Next check in ' + minutes + ':' + seconds.toString().padStart(2, '0');
             } else {
                 document.getElementById('countdown').textContent = ' • Checking now...';
             }
@@ -824,7 +834,8 @@ function goToSetup() {
         
         const API_BASE = window.location.origin;
         
-        function updateConnectionStatus(connected, method = '') {
+        function updateConnectionStatus(connected, method) {
+            method = method || '';
             // Update status text instead of separate indicator
             if (connected) {
                 document.getElementById('statusText').textContent = '✅ Connected and ready';
@@ -832,6 +843,7 @@ function goToSetup() {
                 document.getElementById('statusText').textContent = '🔄 Connecting...';
             }
         }
+    </script>
         
         function connectToNotifications() {
             if (eventSource) {
