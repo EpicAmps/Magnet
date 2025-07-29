@@ -1,4 +1,17 @@
-/* Checkbox styling for task lists */
+/* Keep hover/touch feedback for task rows */
+        .note-content li:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .note-content li:active {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+        
+        /* Make task text unselectable */
+        .note-content li {
+            user-select: none;
+            -webkit-user-select: none;
+        }        /* Checkbox styling for task lists */
         .note<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,11 +79,12 @@
         
         .status {
             background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
+            padding: 12px 15px;  /* Reduced padding */
             border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 1.1rem;
+            margin-bottom: 15px;  /* Reduced from 20px */
+            font-size: 1rem;  /* Reduced from 1.1rem */
             border-left: 4px solid #4CAF50;
+            text-align: center;
         }
         
         .note-content {
@@ -347,14 +361,21 @@
                 <img src="/magnet-logo.png" alt="Magnet" class="magnet-logo">
                 <h1>Magnet Notes</h1>
             </div>
-            <div class="fridge-info">
-                <div><strong>📧 Email:</strong> <span id="fridgeEmailDisplay">Loading...</span></div>
-                <div><strong>🆔 ID:</strong> <span id="fridgeIdDisplay">Loading...</span></div>
-            </div>
+            <button class="info-button" onclick="toggleInfo()">ℹ️</button>
+        </div>
+        
+        <div class="info-popup" id="infoPopup">
+            <h3>🧲 Magnet Fridge Info</h3>
+            <p><strong>📧 Email:</strong> <span id="fridgeEmailInfo">Loading...</span></p>
+            <p><strong>🆔 Fridge ID:</strong> <span id="fridgeIdInfo">Loading...</span></p>
+            <p><strong>📱 How to use:</strong> Share any note from your iPhone using "Shortcuts" → "Coolio Quickie"</p>
+            <p><strong>🔄 Auto-refresh:</strong> <span id="refreshStatus">Checking every 2 minutes</span></p>
+            <button class="close-btn" onclick="toggleInfo()">Close</button>
         </div>
         
         <div class="status" id="status">
-            Starting hybrid notification system...
+            <span id="statusText">Starting system...</span>
+            <span id="countdown" style="opacity: 0.7; font-size: 0.9em;"></span>
         </div>
         
         <div class="note-content" id="noteContent">
@@ -403,26 +424,55 @@
             return null;
         }
         
+        let lastPollingCheck = 0;
+        let nextPollingIn = 120; // 2 minutes in seconds
+        let countdownInterval = null;
+        
         // Update display with fridge info
         if (fridgeId && fridgeName) {
-            document.getElementById('fridgeIdDisplay').textContent = fridgeId;
-            document.getElementById('fridgeEmailDisplay').textContent = `incoming.magnet+${fridgeName}@gmail.com`;
+            document.getElementById('fridgeIdInfo').textContent = fridgeId;
+            document.getElementById('fridgeEmailInfo').textContent = `incoming.magnet+${fridgeName}@gmail.com`;
         } else {
             // Redirect to setup if no fridge info
             window.location.href = '/setup.html';
         }
         
+        function toggleInfo() {
+            const popup = document.getElementById('infoPopup');
+            popup.classList.toggle('show');
+        }
+        
+        function updateCountdown() {
+            const now = Date.now();
+            const timeSinceLastCheck = Math.floor((now - lastPollingCheck) / 1000);
+            const timeUntilNext = Math.max(0, 120 - timeSinceLastCheck);
+            
+            if (timeUntilNext > 0) {
+                const minutes = Math.floor(timeUntilNext / 60);
+                const seconds = timeUntilNext % 60;
+                document.getElementById('countdown').textContent = 
+                    ` • Next check in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('countdown').textContent = ' • Checking now...';
+            }
+        }
+        
+        function startCountdown() {
+            lastPollingCheck = Date.now();
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
+        }
+        
         const API_BASE = window.location.origin;
         
         function updateConnectionStatus(connected, method = '') {
-            const status = document.getElementById('connectionStatus');
+            // Update status text instead of separate indicator
             if (connected) {
-                // Always show "Connected" regardless of method
-                status.textContent = '🟢 Connected';
-                status.className = 'connection-status connected';
+                document.getElementById('statusText').textContent = '✅ Connected and ready';
             } else {
-                status.textContent = '🔴 Connecting...';
-                status.className = 'connection-status disconnected';
+                document.getElementById('statusText').textContent = '🔄 Connecting...';
             }
         }
         
@@ -438,8 +488,8 @@
                 console.log('Connected to notification service for fridge:', fridgeId);
                 isSSEWorking = true;
                 lastSSEMessage = Date.now();
-                updateConnectionStatus(true, 'Real-time');
-                document.getElementById('status').textContent = '✅ Ready to receive notes! Send an email to see it here.';
+                updateConnectionStatus(true);
+                document.getElementById('statusText').textContent = '✅ Real-time updates active';
             };
             
             eventSource.onmessage = (event) => {
@@ -451,10 +501,10 @@
                 lastSSEMessage = Date.now();
                 
                 if (data.type === 'note_updated') {
-                    document.getElementById('status').textContent = `📧 New email received instantly! From: ${data.fridgeName || 'unknown'}`;
+                    document.getElementById('statusText').textContent = '📧 New note received instantly!';
                     fetchNote();
                 } else if (data.type === 'connected') {
-                    document.getElementById('status').textContent = data.message;
+                    document.getElementById('statusText').textContent = '✅ Real-time updates active';
                 }
             };
             
@@ -462,7 +512,7 @@
                 console.error('SSE Error:', error);
                 isSSEWorking = false;
                 updateConnectionStatus(false);
-                document.getElementById('status').textContent = '❌ Having trouble connecting. Notes may take longer to appear...';
+                document.getElementById('statusText').textContent = '🔄 Using backup checking';
                 
                 // Retry SSE connection in 10 seconds
                 setTimeout(connectToNotifications, 10000);
@@ -492,14 +542,15 @@
                 
                 if (data.timestamp > lastUpdate) {
                     console.log('Found new note via polling!');
-                    document.getElementById('status').textContent = '📧 New note found!';
+                    document.getElementById('statusText').textContent = '📧 New note found!';
                     updateNoteDisplay(data);
                 } else {
                     // No new notes, but polling is working - show connected
                     updateConnectionStatus(true);
-                    document.getElementById('status').textContent = '✅ Ready to receive notes! Send an email to see it here.';
+                    document.getElementById('statusText').textContent = '✅ Up to date';
                 }
                 
+                startCountdown(); // Reset countdown
                 lastManualCheck = Date.now();
             } catch (error) {
                 console.error('Polling error:', error);
@@ -616,6 +667,9 @@
             
             // Add click handlers for task list items
             setupTaskListInteraction();
+            
+            // Start countdown timer
+            startCountdown();
         }
         
         // Make entire task list rows clickable
