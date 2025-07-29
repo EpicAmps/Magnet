@@ -1,18 +1,4 @@
-/* Keep hover/touch feedback for task rows */
-        .note-content li:hover {
-            background-color: rgba(52, 152, 219, 0.1);
-        }
-        
-        .note-content li:active {
-            background-color: rgba(52, 152, 219, 0.2);
-        }
-        
-        /* Make task text unselectable */
-        .note-content li {
-            user-select: none;
-            -webkit-user-select: none;
-        }        /* Checkbox styling for task lists */
-        .note<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -569,7 +555,9 @@
                 lastManualCheck = Date.now();
             } catch (error) {
                 console.error('Error fetching note:', error);
-                document.getElementById('status').textContent = '❌ Error loading note';
+                document.getElementById('noteContent').innerHTML = 
+                    '<div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing</div>';
+                document.getElementById('statusText').textContent = '❌ Connection error';
                 updateConnectionStatus(false);
             }
         }
@@ -581,8 +569,12 @@
                 // Show better status messages
                 if (content.includes('No notes yet')) {
                     document.getElementById('noteContent').innerHTML = 
-                        '<div class="empty-state">📱 Waiting for your first note...<br><br>Send an email to the address above to see it here!</div>';
-                    document.getElementById('status').textContent = '⏳ No notes received yet. Send an email to test!';
+                        '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
+                    document.getElementById('statusText').textContent = '⏳ No notes yet';
+                } else if (content.includes('Error loading')) {
+                    document.getElementById('noteContent').innerHTML = 
+                        '<div class="empty-state">❌ Error loading note<br><br>Try refreshing or send a new note</div>';
+                    document.getElementById('statusText').textContent = '❌ Error loading note';
                 } else {
                     // Display HTML content (from markdown) or plain text
                     if (content.includes('<') && content.includes('>')) {
@@ -594,14 +586,14 @@
                     }
                     
                     // Update status based on how we got the update
-                    document.getElementById('status').textContent = `📧 New note from ${data.sender || 'someone'}!`;
+                    document.getElementById('statusText').textContent = `📧 Note from ${data.sender || 'someone'}!`;
                 }
                 
                 document.getElementById('timestamp').textContent = 
                     `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
                 lastUpdate = data.timestamp;
             } else {
-                document.getElementById('status').textContent = '🔄 Checking for updates...';
+                document.getElementById('statusText').textContent = '🔄 Checking for updates...';
             }
         }
         
