@@ -1,4 +1,4 @@
-import { put, head, get, list } from '@vercel/blob';
+import { put, head, get, list, del } from '@vercel/blob';
 
 export default async function handler(req, res) {
   // Enable CORS for fridge access
@@ -51,6 +51,56 @@ export default async function handler(req, res) {
         timestamp: noteData.timestamp,
         fridgeId: fridgeId
       });
+      
+    } else if (req.method === 'DELETE') {
+      // Delete note for fridge
+      const { fridgeId } = req.body;
+      
+      if (!fridgeId) {
+        return res.status(400).json({ error: 'Fridge ID is required' });
+      }
+      
+      try {
+        // Find and delete the most recent blob for this fridge
+        const blobPrefix = `fridge-${fridgeId}`;
+        console.log('Deleting blobs with prefix:', blobPrefix);
+        
+        // List all blobs that start with our prefix
+        const { blobs } = await list({ prefix: blobPrefix });
+        
+        if (blobs.length === 0) {
+          return res.json({ 
+            success: true,
+            message: 'No notes to delete' 
+          });
+        }
+        
+        // Delete all blobs for this fridge (in case there are multiple)
+        for (const blob of blobs) {
+          await del(blob.pathname);
+          console.log('Deleted blob:', blob.pathname);
+        }
+        
+        // Notify connected fridges
+        const { notifyFridges } = await import('./ping.js');
+        notifyFridges('note_deleted', { 
+          message: 'Note deleted',
+          fridgeId: fridgeId
+        });
+        
+        return res.json({ 
+          success: true, 
+          message: 'Note deleted successfully',
+          fridgeId: fridgeId
+        });
+        
+      } catch (error) {
+        console.error('Error deleting note:', error);
+        return res.status(500).json({ 
+          error: 'Failed to delete note',
+          details: error.message 
+        });
+      }
       
     } else if (req.method === 'GET') {
       // Fridge fetching latest note
@@ -109,7 +159,7 @@ export default async function handler(req, res) {
       }
       
     } else {
-      res.setHeader('Allow', ['GET', 'POST']);
+      res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
       return res.status(405).json({ error: 'Method not allowed' });
     }
     
