@@ -322,15 +322,46 @@
             font-style: italic;
         }
         
-        /* Sender attribution styling */
+        /* Hide sender attribution completely */
         .note-content .sender-attribution {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 2px solid #bdc3c7;
-            color: #7f8c8d;
-            font-style: italic;
-            text-align: right;
+            display: none !important;
+        }
+        
+        /* Pagination controls styling */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            gap: 20px;
             font-size: 1.2rem;
+        }
+        
+        .pagination button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 1.1rem;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination .page-info {
+            color: white;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
         }
         
         /* Horizontal rules */
@@ -462,6 +493,13 @@
             </div>
         </div>
         
+        <!-- Pagination controls -->
+        <div class="pagination" id="pagination" style="display: none;">
+            <button id="prevBtn" onclick="previousNote()">‹ Prev</button>
+            <div class="page-info" id="pageInfo">1 of 1</div>
+            <button id="nextBtn" onclick="nextNote()">Next ›</button>
+        </div>
+        
         <div class="controls">
             <button class="refresh-btn" onclick="fetchNote()">
                 🔄 Refresh Note
@@ -486,6 +524,10 @@
         let isSSEWorking = false;
         let pollingInterval = null;
         let lastManualCheck = 0;
+        
+        // Multi-note support
+        let allNotes = [];
+        let currentNoteIndex = 0;
         
         // Get fridge ID from URL parameter or localStorage
         const urlParams = new URLSearchParams(window.location.search);
@@ -639,7 +681,20 @@
             try {
                 const response = await fetch(`${API_BASE}/api/note?fridgeId=${fridgeId}`);
                 const data = await response.json();
-                updateNoteDisplay(data);
+                
+                // Handle multiple notes or single note response
+                if (Array.isArray(data)) {
+                    allNotes = data.sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+                    currentNoteIndex = 0; // Start with newest note
+                    updateNoteDisplay(allNotes[currentNoteIndex]);
+                    updatePagination();
+                } else {
+                    // Single note response (backward compatibility)
+                    allNotes = data.content ? [data] : [];
+                    currentNoteIndex = 0;
+                    updateNoteDisplay(data);
+                    updatePagination();
+                }
                 
                 // Show that manual refresh worked
                 updateConnectionStatus(true);
@@ -654,7 +709,15 @@
         }
         
         function updateNoteDisplay(data) {
-            if (data.timestamp > lastUpdate) {
+            if (!data || (!data.content && !data.timestamp)) {
+                document.getElementById('noteContent').innerHTML = 
+                    '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
+                document.getElementById('statusText').textContent = '⏳ No notes yet';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            
+            if (data.timestamp > lastUpdate || true) { // Always update when navigating
                 const content = data.content || 'No content received';
                 
                 // Show better status messages
@@ -668,23 +731,66 @@
                     document.getElementById('statusText').textContent = '❌ Error loading note';
                 } else {
                     // Display HTML content (from markdown) or plain text
-                    if (content.includes('<') && content.includes('>')) {
+                    let displayContent = content;
+                    
+                    // Remove iOS Shortcut attribution if present
+                    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
+                    displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
+                    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+                    displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
+                    displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
+                    
+                    if (displayContent.includes('<') && displayContent.includes('>')) {
                         // Content contains HTML (from markdown processing)
-                        document.getElementById('noteContent').innerHTML = content;
+                        document.getElementById('noteContent').innerHTML = displayContent;
                     } else {
                         // Plain text content
-                        document.getElementById('noteContent').innerHTML = content.replace(/\n/g, '<br>');
+                        document.getElementById('noteContent').innerHTML = displayContent.replace(/\n/g, '<br>');
                     }
                     
-                    // Update status based on how we got the update
-                    document.getElementById('statusText').textContent = `📧 Note from ${data.sender || 'someone'}!`;
+                    // Update status based on current note
+                    const noteNumber = allNotes.length > 1 ? ` (${currentNoteIndex + 1}/${allNotes.length})` : '';
+                    document.getElementById('statusText').textContent = `📧 Note from ${data.sender || 'someone'}${noteNumber}`;
                 }
                 
                 document.getElementById('timestamp').textContent = 
                     `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
-                lastUpdate = data.timestamp;
-            } else {
-                document.getElementById('statusText').textContent = '🔄 Checking for updates...';
+                lastUpdate = Math.max(lastUpdate, data.timestamp);
+            }
+        }
+        
+        // Pagination functions
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (allNotes.length <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            pagination.style.display = 'flex';
+            pageInfo.textContent = `${currentNoteIndex + 1} of ${allNotes.length}`;
+            
+            prevBtn.disabled = currentNoteIndex === 0;
+            nextBtn.disabled = currentNoteIndex === allNotes.length - 1;
+        }
+        
+        function previousNote() {
+            if (currentNoteIndex > 0) {
+                currentNoteIndex--;
+                updateNoteDisplay(allNotes[currentNoteIndex]);
+                updatePagination();
+            }
+        }
+        
+        function nextNote() {
+            if (currentNoteIndex < allNotes.length - 1) {
+                currentNoteIndex++;
+                updateNoteDisplay(allNotes[currentNoteIndex]);
+                updatePagination();
             }
         }
         
@@ -696,38 +802,54 @@
             
             try {
                 updateConnectionStatus(true);
-                document.getElementById('status').textContent = '🗑️ Deleting note...';
+                document.getElementById('statusText').textContent = '🗑️ Deleting note...';
                 
-                // Send delete request to API
+                // Send delete request to API for current note
+                const currentNote = allNotes[currentNoteIndex];
                 const response = await fetch(`${API_BASE}/api/note`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        fridgeId: fridgeId
+                        fridgeId: fridgeId,
+                        noteId: currentNote.id || currentNote.timestamp // Use ID or timestamp
                     })
                 });
                 
                 if (response.ok) {
-                    // Clear the display
-                    document.getElementById('noteContent').innerHTML = 
-                        '<div class="empty-state">📱 Note deleted!<br><br>Send a new email to see it here!</div>';
+                    // Remove note from local array
+                    allNotes.splice(currentNoteIndex, 1);
+                    
+                    // Adjust current index if needed
+                    if (currentNoteIndex >= allNotes.length && allNotes.length > 0) {
+                        currentNoteIndex = allNotes.length - 1;
+                    }
+                    
+                    if (allNotes.length > 0) {
+                        // Show remaining note
+                        updateNoteDisplay(allNotes[currentNoteIndex]);
+                        updatePagination();
+                        document.getElementById('statusText').textContent = '✅ Note deleted successfully!';
+                    } else {
+                        // No notes left
+                        document.getElementById('noteContent').innerHTML = 
+                            '<div class="empty-state">📱 Note deleted!<br><br>Send a new email to see it here!</div>';
+                        document.getElementById('pagination').style.display = 'none';
+                        document.getElementById('statusText').textContent = '✅ All notes deleted!';
+                        lastUpdate = 0;
+                    }
                     
                     document.getElementById('timestamp').textContent = 
                         `Deleted: ${new Date().toLocaleString()}`;
                     
-                    document.getElementById('status').textContent = '✅ Note deleted successfully!';
-                    
-                    // Reset lastUpdate so next note will appear
-                    lastUpdate = 0;
                 } else {
                     throw new Error('Failed to delete note');
                 }
                 
             } catch (error) {
                 console.error('Error deleting note:', error);
-                document.getElementById('status').textContent = '❌ Error deleting note. Try again.';
+                document.getElementById('statusText').textContent = '❌ Error deleting note. Try again.';
             }
         }
         
