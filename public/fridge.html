@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+/* Checkbox styling for task lists */
+        .note<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -118,28 +119,73 @@
             line-height: 1.5;
         }
         
-        /* Checkbox styling for task lists */
+        /* Checkbox styling for task lists - keep current size */
         .note-content input[type="checkbox"] {
-            transform: scale(1.8);
+            transform: scale(1.8);  /* Back to 1.8 - good for fingers */
             margin-right: 15px;
             cursor: pointer;
             vertical-align: middle;
+            pointer-events: auto;
         }
         
-        /* Task list items - more compatible approach */
+        /* Make entire task row clickable */
         .note-content li {
-            margin: 12px 0;
-            font-size: 1.4rem;
-            line-height: 1.5;
+            margin: 8px 0;
+            font-size: 1.2rem;
+            line-height: 1.4;
             display: flex;
             align-items: flex-start;
-            gap: 10px;
+            gap: 8px;
+            padding: 10px;  /* Add padding for larger touch target */
+            border-radius: 8px;  /* Rounded corners */
+            cursor: pointer;  /* Show it's clickable */
+            transition: background-color 0.2s ease;  /* Smooth hover */
+        }
+        
+        /* Hover/touch feedback for task rows */
+        .note-content li:hover {
+            background-color: rgba(52, 152, 219, 0.1);  /* Light blue on hover */
+        }
+        
+        /* Active state for touch feedback */
+        .note-content li:active {
+            background-color: rgba(52, 152, 219, 0.2);  /* Darker blue when pressed */
+        }
+        
+        /* Make task text unselectable to avoid selection on touch */
+        .note-content li {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        /* More compact headers */
+        .note-content h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;  /* Reduced from 2.2rem */
+            margin: 15px 0 10px 0;  /* Reduced margins */
+            border-bottom: 2px solid #3498db;  /* Thinner border */
+            padding-bottom: 5px;  /* Less padding */
+        }
+        
+        .note-content h2 {
+            color: #2c3e50;
+            font-size: 1.5rem;  /* Reduced from 1.8rem */
+            margin: 12px 0 8px 0;  /* Reduced margins */
+            border-bottom: 1px solid #95a5a6;  /* Thinner border */
+            padding-bottom: 3px;
+        }
+        
+        .note-content h3 {
+            color: #2c3e50;
+            font-size: 1.3rem;  /* Reduced from 1.6rem */
+            margin: 10px 0 6px 0;  /* Reduced margins */
         }
         
         /* Remove default list bullets for checkbox items */
         .note-content ul {
             list-style: none;
-            padding-left: 20px;
+            padding-left: 15px;  /* Reduced from 20px */
+            margin: 10px 0;  /* Reduced from 15px */
         }
         
         /* Bold and italic text */
@@ -228,6 +274,21 @@
             background: #45a049;
         }
         
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+        
         .setup-btn {
             background: #2196F3;
             color: white;
@@ -306,6 +367,9 @@
         <div class="controls">
             <button class="refresh-btn" onclick="fetchNote()">
                 🔄 Refresh Note
+            </button>
+            <button class="delete-btn" onclick="deleteNote()">
+                🗑️ Delete Note
             </button>
             <button class="setup-btn" onclick="goToSetup()">
                 ⚙️ Change Fridge
@@ -490,6 +554,49 @@
             }
         }
         
+        async function deleteNote() {
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this note?')) {
+                return;
+            }
+            
+            try {
+                updateConnectionStatus(true);
+                document.getElementById('status').textContent = '🗑️ Deleting note...';
+                
+                // Send delete request to API
+                const response = await fetch(`${API_BASE}/api/note`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fridgeId: fridgeId
+                    })
+                });
+                
+                if (response.ok) {
+                    // Clear the display
+                    document.getElementById('noteContent').innerHTML = 
+                        '<div class="empty-state">📱 Note deleted!<br><br>Send a new email to see it here!</div>';
+                    
+                    document.getElementById('timestamp').textContent = 
+                        `Deleted: ${new Date().toLocaleString()}`;
+                    
+                    document.getElementById('status').textContent = '✅ Note deleted successfully!';
+                    
+                    // Reset lastUpdate so next note will appear
+                    lastUpdate = 0;
+                } else {
+                    throw new Error('Failed to delete note');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                document.getElementById('status').textContent = '❌ Error deleting note. Try again.';
+            }
+        }
+        
         function goToSetup() {
             window.location.href = '/setup.html';
         }
@@ -506,6 +613,32 @@
             
             // Initial note fetch
             fetchNote();
+            
+            // Add click handlers for task list items
+            setupTaskListInteraction();
+        }
+        
+        // Make entire task list rows clickable
+        function setupTaskListInteraction() {
+            // Use event delegation to handle dynamically added content
+            document.getElementById('noteContent').addEventListener('click', function(event) {
+                const listItem = event.target.closest('li');
+                
+                // Only handle list items that contain checkboxes
+                if (listItem && listItem.querySelector('input[type="checkbox"]')) {
+                    const checkbox = listItem.querySelector('input[type="checkbox"]');
+                    
+                    // Don't double-toggle if user clicked directly on checkbox
+                    if (event.target.type !== 'checkbox') {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    
+                    // Add visual feedback
+                    listItem.style.backgroundColor = checkbox.checked ? 
+                        'rgba(46, 204, 113, 0.2)' :  // Green tint when checked
+                        '';  // Remove background when unchecked
+                }
+            });
         }
         
         // Cleanup on page unload
