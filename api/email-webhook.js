@@ -147,19 +147,19 @@ export default async function handler(req, res) {
   }
 }
 
-// Generate consistent fridge ID from name
+// Generate consistent fridge ID from name (UPDATED to match setup page)
 function generateFridgeId(fridgeName) {
   // Simple hash function for consistent ID generation
   let hash = 0;
-  for (let i = 0; i < fridgeName.length; i++) {
-    const char = fridgeName.charCodeAt(i);
+  const str = fridgeName.toLowerCase().trim();
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // Convert to 32-bit integer
   }
   
-  // Convert to base36 and ensure it's 12 characters
-  const baseId = Math.abs(hash).toString(36);
-  return (baseId + '000000000000').substring(0, 12);
+  // Use the new format with fridge_ prefix
+  return 'fridge_' + Math.abs(hash).toString(36);
 }
 
 // Format email content as a nice note
