@@ -441,12 +441,26 @@
                 
                 <div class="install-options">
                     
-                    <!-- Option 1: Email Me -->
+                    <!-- Option 1: QR Code -->
+                    <div class="install-option">
+                        <div class="option-icon">📷</div>
+                        <div class="option-content">
+                            <h4>Scan QR Code</h4>
+                            <p>Use iPhone Camera to scan and install</p>
+                            <div class="qr-code">
+                                <img id="qrCodeImage" src="" alt="QR Code" width="150" height="150">
+                            </div>
+                            <p class="qr-instructions">Open Camera → Point at code → Tap notification</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Future Options (commented out for MVP) -->
+                    <!--
                     <div class="install-option">
                         <div class="option-icon">📧</div>
                         <div class="option-content">
                             <h4>Email Me the Shortcut</h4>
-                            <p>Get it sent to your email as an attachment (Recommended)</p>
+                            <p>Get it sent to your email as an attachment</p>
                             <div class="email-form">
                                 <input type="email" id="emailInput" placeholder="your@email.com" />
                                 <button onclick="emailShortcut()" class="install-btn primary">
@@ -455,6 +469,7 @@
                             </div>
                         </div>
                     </div>
+                    -->
                     
                     <!-- Option 2: Samsung Quick Share -->
                     <div class="install-option">
@@ -468,19 +483,6 @@
                             <p style="font-size: 0.85rem; color: #666; margin-top: 8px;">
                                 Works with Samsung Galaxy phones nearby
                             </p>
-                        </div>
-                    </div>
-                    
-                    <!-- Option 3: QR Code -->
-                    <div class="install-option">
-                        <div class="option-icon">📷</div>
-                        <div class="option-content">
-                            <h4>Scan QR Code</h4>
-                            <p>Use iPhone Camera to scan and install</p>
-                            <div class="qr-code">
-                                <img id="qrCodeImage" src="" alt="QR Code" width="150" height="150">
-                            </div>
-                            <p class="qr-instructions">Open Camera → Point at code → Tap notification</p>
                         </div>
                     </div>
                     
