@@ -315,9 +315,9 @@
                     }
                 ];
 
-                // Create the complete workflow object
+                // Create the complete workflow object using your exact working structure
                 const workflow = {
-                    "WFWorkflowClientVersion": "2605.0.5",
+                    "WFWorkflowClientVersion": "2607.0.2",
                     "WFWorkflowHasOutputFallback": false,
                     "WFWorkflowHasShortcutInputVariables": false,
                     "WFWorkflowIcon": {
@@ -326,16 +326,153 @@
                     },
                     "WFWorkflowImportQuestions": [],
                     "WFWorkflowInputContentItemClasses": [
+                        "WFAppStoreAppContentItem",
+                        "WFArticleContentItem", 
+                        "WFContactContentItem",
+                        "WFDateContentItem",
+                        "WFEmailAddressContentItem",
+                        "WFFolderContentItem",
+                        "WFGenericFileContentItem",
+                        "WFImageContentItem",
+                        "WFiTunesProductContentItem",
+                        "WFLocationContentItem",
+                        "WFDCMapsLinkContentItem",
+                        "WFAVAssetContentItem",
+                        "WFPDFContentItem",
+                        "WFPhoneNumberContentItem",
+                        "WFRichTextContentItem",
+                        "WFSafariWebPageContentItem",
                         "WFStringContentItem",
-                        "WFTextContentItem"
+                        "WFURLContentItem"
                     ],
                     "WFWorkflowMinimumClientVersion": 900,
+                    "WFWorkflowMinimumClientVersionString": "900",
                     "WFWorkflowOutputContentItemClasses": [],
                     "WFWorkflowTypes": [
-                        "Watch",
+                        "WFWidgetWorkflow",
                         "ActionExtension"
                     ],
-                    "WFWorkflowActions": shortcutActions
+                    "WFQuickActionSurfacesSubtypes": [
+                        "WFQuickActionSurfacesSubtypeShortcuts",
+                        "WFQuickActionSurfacesSubtypeShareSheet"
+                    ],
+                    "WFWorkflowHasShortcutInputVariables": false,
+                    "WFWorkflowActions": [
+                        {
+                            "WFWorkflowActionIdentifier": "is.workflow.actions.detect.text",
+                            "WFWorkflowActionParameters": {
+                                "UUID": "E3A34049-87C3-432E-ABD6-4D43DB658753",
+                                "WFTextActionText": {
+                                    "Value": {
+                                        "string": "___EXTENSIONINPUT___",
+                                        "attachmentsByRange": {
+                                            "{0, 21}": {
+                                                "Type": "ExtensionInput"
+                                            }
+                                        }
+                                    },
+                                    "WFSerializationType": "WFTextTokenString"
+                                }
+                            }
+                        },
+                        {
+                            "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl", 
+                            "WFWorkflowActionParameters": {
+                                "UUID": "76801EEC-7559-4F3F-8BA0-7770896E33C9",
+                                "WFHTTPHeaders": {
+                                    "Value": {
+                                        "WFDictionaryFieldValueItems": [
+                                            {
+                                                "WFItemType": 0,
+                                                "WFKey": {
+                                                    "Value": {
+                                                        "string": "Content-Type"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                },
+                                                "WFValue": {
+                                                    "Value": {
+                                                        "string": "application/json"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "WFSerializationType": "WFDictionaryFieldValue"
+                                },
+                                "WFURL": "https://magnet-mu.vercel.app/api/note",
+                                "WFJSONValues": {
+                                    "Value": {
+                                        "WFDictionaryFieldValueItems": [
+                                            {
+                                                "WFItemType": 0,
+                                                "WFKey": {
+                                                    "Value": {
+                                                        "string": "fridgeId"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                },
+                                                "WFValue": {
+                                                    "Value": {
+                                                        "string": fridgeId
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                }
+                                            },
+                                            {
+                                                "WFItemType": 0,
+                                                "WFKey": {
+                                                    "Value": {
+                                                        "string": "content"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                },
+                                                "WFValue": {
+                                                    "Value": {
+                                                        "string": "___EXTENSIONINPUT___",
+                                                        "attachmentsByRange": {
+                                                            "{0, 21}": {
+                                                                "OutputUUID": "E3A34049-87C3-432E-ABD6-4D43DB658753",
+                                                                "OutputName": "Detected Text",
+                                                                "Type": "ActionOutput"
+                                                            }
+                                                        }
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                }
+                                            },
+                                            {
+                                                "WFItemType": 0,
+                                                "WFKey": {
+                                                    "Value": {
+                                                        "string": "sender"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                },
+                                                "WFValue": {
+                                                    "Value": {
+                                                        "string": "iPhone"
+                                                    },
+                                                    "WFSerializationType": "WFTextTokenString"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "WFSerializationType": "WFDictionaryFieldValue"
+                                },
+                                "WFHTTPMethod": "POST"
+                            }
+                        },
+                        {
+                            "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
+                            "WFWorkflowActionParameters": {
+                                "UUID": "848C416D-2050-4A87-95BD-4321DA552BE6",
+                                "WFNotificationActionTitle": "Success!",
+                                "WFNotificationActionBody": `Note sent to ${fridgeName}!`
+                            }
+                        }
+                    ]
                 };
 
                 // Encode the workflow for the URL
