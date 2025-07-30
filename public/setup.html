@@ -626,14 +626,12 @@
         function showSuccess(fridgeName, fridgeId, shortcutData) {
             document.getElementById('setupForm').style.display = 'none';
             
-            document.getElementById('displayFridgeName').textContent = fridgeName;
-            document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
-            document.getElementById('displayFridgeId').textContent = fridgeId;
-            
+            // Set QR code and manual setup info
             document.getElementById('qrCodeImage').src = shortcutData.qrCode;
             document.getElementById('fridgeIdField').textContent = fridgeId;
             document.getElementById('goToFridgeBtn').href = '/fridge.html?id=' + fridgeId;
             
+            // Store fridge data for other functions
             window.currentFridgeData = { 
                 fridgeName: fridgeName, 
                 fridgeId: fridgeId, 
