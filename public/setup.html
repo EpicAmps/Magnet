@@ -1,116 +1,4 @@
-function showSuccess(fridgeName, fridgeId, shortcutData) {
-            // Hide setup form
-            document.getElementById('setupForm').style.display = 'none';
-            
-            // Populate success info
-            document.getElementById('displayFridgeName').textContent = fridgeName;
-            document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
-            document.getElementById('displayFridgeId').textContent = fridgeId;
-            
-            // Set up installation options
-            document.getElementById('qrCodeImage').src = shortcutData.qrCode;
-            
-            // Populate the manual instruction fields
-            document.getElementById('fridgeIdField').textContent = fridgeId;
-            
-            // Set fridge link
-            document.getElementById('goToFridgeBtn').href = `/fridge.html?id=${fridgeId}`;
-            
-            // Store for email function
-            window.currentFridgeData = { fridgeName, fridgeId, shortcutUrl: shortcutData.shortcutUrl };
-            
-            // Show success section
-            document.getElementById('successSection').classList.add('show');
-        }
-        
-        async function emailShortcut() {
-            const emailInput = document.getElementById('emailInput');
-            const email = emailInput.value.trim();
-            
-            if (!email) {
-                alert('Please enter your email address');
-                return;
-            }
-            
-            if (!email.includes('@')) {
-                alert('Please enter a valid email address');
-                return;
-            }
-            
-            try {
-                const button = event.target;
-                button.disabled = true;
-                button.textContent = '📧 Sending...';
-                
-                const response = await fetch('/api/send-shortcut-email', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email: email,
-                        fridgeName: window.currentFridgeData.fridgeName,
-                        fridgeId: window.currentFridgeData.fridgeId
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    button.textContent = '✅ Sent!';
-                    button.style.background = '#28A745';
-                    
-                    if (result.debug && !result.debug.hasApiKey) {
-                        alert('📧 Email sending is not configured yet, but the shortcut would be sent to: ' + email + '\n\nFor now, please use the QR code method.');
-                        console.log('Debug info:', result.debug);
-                    } else {
-                        alert('📧 Shortcut sent to your email! Check your inbox and tap the attachment to install.');
-                    }
-                } else {
-                    throw new Error(result.error || 'Failed to send email');
-                }
-                
-            } catch (error) {
-                console.error('Email error:', error);
-                alert('❌ Failed to send email. Please try the QR code method instead.');
-                event.target.disabled = false;
-                event.target.textContent = 'Send Email';
-            }
-        }
-        
-        async function initiateQuickShare() {
-            const button = event.target;
-            
-            try {
-                // Check if Web Share API is available (supported on Samsung browsers)
-                if (navigator.share) {
-                    button.textContent = '📲 Opening Quick Share...';
-                    
-                    // Download the shortcut file first
-                    const response = await fetch(window.currentFridgeData.shortcutUrl);
-                    const blob = await response.blob();
-                    
-                    // Create a File object
-                    const file = new File([blob], 'Send to Magnet.shortcut', {
-                        type: 'application/octet-stream'
-                    });
-                    
-                    // Use Web Share API to share the file
-                    await navigator.share({
-                        title: 'Send to Magnet Shortcut',
-                        text: 'Install this shortcut to send notes to your ' + window.currentFridgeData.fridgeName + ' fridge!',
-                        files: [file]
-                    });
-                    
-                    button.textContent = '✅ Shared!';
-                    button.style.background = '#28A745';
-                    
-                } else {
-                    // Fallback: download the file and show instructions
-                    button.textContent = '📥 Downloading...';
-                    
-                    // Create download link
-                    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -269,110 +157,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
             color: #2c3e50;
         }
         
-        .qr-code {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .qr-code img {
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .instructions {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .instructions li {
-            padding: 8px 0;
-            padding-left: 25px;
-            position: relative;
-            color: #555;
-            font-size: 1rem;
-        }
-        
-        .instructions li:before {
-            content: "📱";
-            position: absolute;
-            left: 0;
-        }
-        
-        .alt-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .alt-link a {
-            color: #3498db;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        
-        .manual-instructions {
-            text-align: left;
-        }
-        
-        .step {
-            display: flex;
-            margin-bottom: 20px;
-            align-items: flex-start;
-        }
-        
-        .step-number {
-            background: #007AFF;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 15px;
-            flex-shrink: 0;
-            font-size: 14px;
-        }
-        
-        .step-content {
-            flex: 1;
-            color: #333;
-        }
-        
-        .step-content code {
-            background: #f5f5f5;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .json-fields {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 6px;
-            margin-top: 8px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .json-fields div {
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .copy-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            cursor: pointer;
-        }
-        
         .install-options {
             display: flex;
             flex-direction: column;
@@ -499,6 +283,74 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
             background: #f5f5f5;
         }
         
+        .manual-instructions {
+            text-align: left;
+        }
+        
+        .step {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            background: #007AFF;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .step-content {
+            flex: 1;
+            color: #333;
+        }
+        
+        .step-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .json-fields {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .json-fields div {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+        }
+        
         .go-to-fridge {
             background: #2196F3;
             color: white;
@@ -547,19 +399,19 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
         </div>
         
         <h1>Magnet Setup</h1>
-        <p class="subtitle">Transform your Samsung Smart Fridge into a family communication hub</p>
+        <p class="subtitle">Share mobile notes to your Samsung Smart Fridge. You're welcome. ;)</p>
         
         <div class="error-message" id="errorMessage"></div>
         
         <!-- Setup Form -->
         <div class="setup-form" id="setupForm">
             <div class="form-group">
-                <label for="fridgeName">Name Your Fridge</label>
+                <label for="fridgeName">Your Fridge's Name</label>
                 <input type="text" id="fridgeName" placeholder="Kitchen, Garage, Office..." required>
             </div>
             
             <button class="setup-btn" id="setupBtn" onclick="setupFridge()">
-                🚀 Create My Fridge
+                🚀 Create Fridge Setup
             </button>
         </div>
         
@@ -587,7 +439,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
                     Choose the easiest way for you to install the shortcut:
                 </p>
                 
-                <!-- Easy Options -->
                 <div class="install-options">
                     
                     <!-- Option 1: Email Me -->
@@ -687,34 +538,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
                         </div>
                     </div>
                 </div>
-            </div>d('successMessage')" class="copy-btn">📋 Copy</button>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-number">8</div>
-                        <div class="step-content">
-                            <strong>Enable Share Sheet</strong><br>
-                            • Tap the settings icon<br>
-                            • Enable "Use with Share Sheet"<br>
-                            • Choose content types: Text, Safari Web Pages, etc.
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <div class="step-number">9</div>
-                        <div class="step-content">
-                            <strong>Name Your Shortcut</strong><br>
-                            Name it "Send to Magnet" and tap "Done"
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="video-link" style="margin-top: 20px; text-align: center;">
-                    <p style="color: #777; font-size: 14px;">
-                        🎥 <a href="#" style="color: #3498db;">Watch setup video</a> (coming soon)
-                    </p>
-                </div>
             </div>
             
             <div style="text-align: center;">
@@ -731,24 +554,20 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
             const setupBtn = document.getElementById('setupBtn');
             const errorMessage = document.getElementById('errorMessage');
             
-            // Validate input
             if (!fridgeName) {
-                showError('Please enter a name for your fridge');
+                showError('Please enter your fridge name');
                 return;
             }
             
-            // Generate a unique fridge ID
             const fridgeId = generateFridgeId();
             
             try {
                 setupBtn.disabled = true;
                 setupBtn.textContent = '🔄 Creating...';
                 
-                // Store fridge info in localStorage
                 localStorage.setItem('fridgeId', fridgeId);
                 localStorage.setItem('fridgeName', fridgeName);
                 
-                // Generate shortcut and QR code
                 const response = await fetch('/api/generate-shortcut', {
                     method: 'POST',
                     headers: {
@@ -765,8 +584,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
                 }
                 
                 const result = await response.json();
-                
-                // Show success section
                 showSuccess(fridgeName, fridgeId, result);
                 
             } catch (error) {
@@ -792,28 +609,22 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
         }
         
         function showSuccess(fridgeName, fridgeId, shortcutData) {
-            // Hide setup form
             document.getElementById('setupForm').style.display = 'none';
             
-            // Populate success info
             document.getElementById('displayFridgeName').textContent = fridgeName;
             document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
             document.getElementById('displayFridgeId').textContent = fridgeId;
             
-            // Set up installation options
-            document.getElementById('directDownload').href = shortcutData.shortcutUrl;
             document.getElementById('qrCodeImage').src = shortcutData.qrCode;
-            
-            // Populate the manual instruction fields
             document.getElementById('fridgeIdField').textContent = fridgeId;
+            document.getElementById('goToFridgeBtn').href = '/fridge.html?id=' + fridgeId;
             
-            // Set fridge link
-            document.getElementById('goToFridgeBtn').href = `/fridge.html?id=${fridgeId}`;
+            window.currentFridgeData = { 
+                fridgeName: fridgeName, 
+                fridgeId: fridgeId, 
+                shortcutUrl: shortcutData.shortcutUrl 
+            };
             
-            // Store for email function
-            window.currentFridgeData = { fridgeName, fridgeId };
-            
-            // Show success section
             document.getElementById('successSection').classList.add('show');
         }
         
@@ -848,19 +659,75 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
                     })
                 });
                 
+                const result = await response.json();
+                
                 if (response.ok) {
                     button.textContent = '✅ Sent!';
                     button.style.background = '#28A745';
-                    alert('📧 Shortcut sent to your email! Check your inbox and tap the attachment to install.');
+                    
+                    if (result.debug && !result.debug.hasApiKey) {
+                        alert('📧 Email sending is not configured yet, but the shortcut would be sent to: ' + email + '\n\nFor now, please use the QR code method.');
+                    } else {
+                        alert('📧 Shortcut sent to your email! Check your inbox and tap the attachment to install.');
+                    }
                 } else {
-                    throw new Error('Failed to send email');
+                    throw new Error(result.error || 'Failed to send email');
                 }
                 
             } catch (error) {
                 console.error('Email error:', error);
-                alert('❌ Failed to send email. Please try the direct download instead.');
+                alert('❌ Failed to send email. Please try the QR code method instead.');
                 event.target.disabled = false;
                 event.target.textContent = 'Send Email';
+            }
+        }
+        
+        async function initiateQuickShare() {
+            const button = event.target;
+            
+            try {
+                if (navigator.share) {
+                    button.textContent = '📲 Opening Quick Share...';
+                    
+                    const response = await fetch(window.currentFridgeData.shortcutUrl);
+                    const blob = await response.blob();
+                    
+                    const file = new File([blob], 'Send to Magnet.shortcut', {
+                        type: 'application/octet-stream'
+                    });
+                    
+                    await navigator.share({
+                        title: 'Send to Magnet Shortcut',
+                        text: 'Install this shortcut to send notes to your ' + window.currentFridgeData.fridgeName + ' fridge!',
+                        files: [file]
+                    });
+                    
+                    button.textContent = '✅ Shared!';
+                    button.style.background = '#28A745';
+                    
+                } else {
+                    button.textContent = '📥 Downloading...';
+                    
+                    const link = document.createElement('a');
+                    link.href = window.currentFridgeData.shortcutUrl;
+                    link.download = 'Send to Magnet.shortcut';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    button.textContent = '📲 Quick Share to Samsung';
+                    alert('📱 File downloaded! Now:\n\n1. Open Samsung Gallery or Files app\n2. Find "Send to Magnet.shortcut"\n3. Tap "Share" → "Quick Share"\n4. Select your iPhone from nearby devices\n5. Accept the file on your iPhone');
+                }
+                
+            } catch (error) {
+                console.error('Quick Share error:', error);
+                button.textContent = '📲 Quick Share to Samsung';
+                
+                if (error.name === 'AbortError') {
+                    return;
+                }
+                
+                alert('❌ Quick Share not available. Please try the email method instead.');
             }
         }
         
@@ -882,7 +749,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
             const text = element.textContent;
             
             navigator.clipboard.writeText(text).then(() => {
-                // Show temporary feedback
                 const btn = event.target;
                 const originalText = btn.textContent;
                 btn.textContent = '✅ Copied!';
@@ -894,7 +760,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
                 }, 2000);
             }).catch(err => {
                 console.error('Failed to copy:', err);
-                // Fallback: select the text
                 const range = document.createRange();
                 range.selectNode(element);
                 window.getSelection().removeAllRanges();
@@ -902,7 +767,6 @@ function showSuccess(fridgeName, fridgeId, shortcutData) {
             });
         }
         
-        // Allow Enter key to submit
         document.getElementById('fridgeName').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 setupFridge();
