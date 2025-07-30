@@ -142,7 +142,7 @@ export default async function handler(req, res) {
     
     // Create a short redirect URL instead of the massive shortcuts:// URL
     const baseUrl = req.headers.origin || `https://${req.headers.host}` || 'https://magnet-mu.vercel.app';
-    const redirectUrl = `${baseUrl}/install-shortcut?fridgeId=${fridgeId}&name=${encodeURIComponent(fridgeName)}`;
+    const redirectUrl = `${baseUrl}/install-shortcut.html?fridgeId=${fridgeId}&name=${encodeURIComponent(fridgeName)}`;
     
     // Generate QR for the short redirect URL instead
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(redirectUrl)}`;
