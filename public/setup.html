@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fridge Setup - Magnet</title>
+    <title>Magnet Setup</title>
     <style>
         * {
             margin: 0;
@@ -17,245 +17,400 @@
             min-height: 100vh;
             padding: 20px;
             color: white;
-            overflow-x: hidden;
         }
         
-        .setup-container {
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 40px;
-            text-align: center;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
-            width: 90%;
-            margin: 0 auto;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .magnet-logo {
+            width: 60px;
+            height: 67px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
         }
         
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 20px;
+            text-align: center;
+            margin-bottom: 10px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
-        .instructions {
-            font-size: 1.2rem;
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        
+        .setup-form {
             margin-bottom: 30px;
-            opacity: 0.9;
-            line-height: 1.6;
         }
         
-        .step {
-            background: rgba(255, 255, 255, 0.05);
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: left;
+        .form-group {
+            margin-bottom: 25px;
         }
         
-        .step-number {
-            background: #4CAF50;
-            color: white;
-            width: 25px;
-            height: 25px;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin-right: 10px;
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
         }
         
-        .fridge-name-input {
+        input[type="text"] {
             width: 100%;
             padding: 15px;
-            border-radius: 10px;
             border: none;
+            border-radius: 10px;
             font-size: 1.1rem;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255, 255, 255, 0.9);
             color: #333;
-            margin: 20px 0;
         }
         
-        .fridge-id {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-family: monospace;
-            font-size: 1.1rem;
-            word-break: break-all;
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
         }
         
-        .status {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            background: rgba(76, 175, 80, 0.2);
-            border-left: 4px solid #4CAF50;
-        }
-        
-        .continue-btn {
+        .setup-btn {
+            width: 100%;
             background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .setup-btn:hover {
+            background: #45a049;
+        }
+        
+        .setup-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .success-section {
+            display: none;
+            text-align: center;
+        }
+        
+        .success-section.show {
+            display: block;
+        }
+        
+        .success-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        
+        .fridge-info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .fridge-info h3 {
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+        
+        .info-item {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .info-item strong {
+            color: #ffffff;
+        }
+        
+        .qr-section {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .qr-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2c3e50;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .qr-code img {
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .instructions {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .instructions li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #555;
+            font-size: 1rem;
+        }
+        
+        .instructions li:before {
+            content: "📱";
+            position: absolute;
+            left: 0;
+        }
+        
+        .alt-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .alt-link a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .alt-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .go-to-fridge {
+            background: #2196F3;
             color: white;
             border: none;
             padding: 15px 30px;
             border-radius: 10px;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             cursor: pointer;
-            margin-top: 20px;
             transition: background 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
         
-        .continue-btn:hover {
-            background: #45a049;
-        }
-        
-        .copy-btn {
-            background: #2196F3;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            cursor: pointer;
-            margin: 5px;
-            transition: background 0.3s;
-        }
-        
-        .copy-btn:hover {
+        .go-to-fridge:hover {
             background: #1976D2;
+        }
+        
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div class="setup-container">
-        <h1>🧊 Fridge Setup</h1>
-        
-        <div class="instructions">
-            <p>Set up your smart fridge to receive notes via email:</p>
+    <div class="container">
+        <div class="logo">
+            <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84.44 90" class="magnet-logo">
+              <defs>
+                <style>
+                  .cls-1 {
+                    fill: #fff;
+                  }
+                </style>
+              </defs>
+              <g id="Layer_1-2" data-name="Layer 1">
+                <g>
+                  <path class="cls-1" d="M71.72,40.6l-23.85,26.11c-3.54,3.87-8.51,6.09-13.65,6.09-4.31,0-8.4-1.57-11.51-4.41-7.1-6.49-7.37-17.8-.6-25.21l23.85-26.11-12.72-11.62L9.39,31.55c-3.2,3.5-5.63,7.52-7.24,11.94C.6,47.77-.12,52.24.02,56.78c.14,4.56,1.14,8.96,2.97,13.08,1.91,4.3,4.64,8.08,8.1,11.25,3.47,3.17,7.48,5.54,11.93,7.06,3.59,1.22,7.35,1.84,11.16,1.84.7,0,1.42-.02,2.13-.06,4.53-.27,8.92-1.39,13.04-3.32,4.26-2,8.04-4.79,11.24-8.29l23.85-26.11-12.72-11.62ZM33.48,10.72l7.2,6.58-7.29,7.98-7.2-6.58,7.29-7.98ZM64.67,53.86l7.29-7.98,7.2,6.58-7.29,7.98-7.2-6.58Z"/>
+                  <polygon class="cls-1" points="84.44 0 53.15 20.19 61.94 24.03 43.94 41.27 77.79 22.82 67.89 18.49 84.44 0"/>
+                </g>
+              </g>
+            </svg>
         </div>
         
-        <div class="step">
-            <span class="step-number">1</span>
-            <strong>Enter your fridge name below</strong>
+        <h1>Magnet Setup</h1>
+        <p class="subtitle">Transform your Samsung Smart Fridge into a family communication hub</p>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <!-- Setup Form -->
+        <div class="setup-form" id="setupForm">
+            <div class="form-group">
+                <label for="fridgeName">Name Your Fridge</label>
+                <input type="text" id="fridgeName" placeholder="Kitchen, Garage, Office..." required>
+            </div>
+            
+            <button class="setup-btn" id="setupBtn" onclick="setupFridge()">
+                🚀 Create My Fridge
+            </button>
         </div>
         
-        <div class="step">
-            <span class="step-number">2</span>
-            <strong>Copy the email address that appears</strong>
+        <!-- Success Section -->
+        <div class="success-section" id="successSection">
+            <h2 class="success-title">🎉 Success!</h2>
+            
+            <div class="fridge-info">
+                <h3>📧 Your Fridge Details</h3>
+                <div class="info-item">
+                    <strong>Name:</strong> <span id="displayFridgeName"></span>
+                </div>
+                <div class="info-item">
+                    <strong>Email:</strong> <span id="displayFridgeEmail"></span>
+                </div>
+                <div class="info-item">
+                    <strong>ID:</strong> <span id="displayFridgeId"></span>
+                </div>
+            </div>
+            
+            <div class="qr-section">
+                <h3 class="qr-title">📱 Install iPhone Shortcut</h3>
+                
+                <div class="qr-code">
+                    <img id="qrCodeImage" src="" alt="QR Code" width="250" height="250">
+                </div>
+                
+                <ul class="instructions" id="instructionsList">
+                    <!-- Instructions will be populated by JavaScript -->
+                </ul>
+                
+                <div class="alt-link">
+                    <a href="#" id="directDownload" target="_blank">
+                        Or tap here to download directly
+                    </a>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="#" class="go-to-fridge" id="goToFridgeBtn">
+                    🧲 Go to My Fridge →
+                </a>
+            </div>
         </div>
-        
-        <div class="step">
-            <span class="step-number">3</span>
-            <strong>Email your notes to that address!</strong>
-        </div>
-        
-        <div>
-            <label for="fridgeNameInput" style="display: block; margin-bottom: 10px; font-weight: bold;">
-                🧊 Fridge Name:
-            </label>
-            <input 
-                type="text" 
-                id="fridgeNameInput" 
-                class="fridge-name-input"
-                placeholder="Kitchen, Garage, Office..." 
-                onchange="updateFridgeSetup()"
-            />
-        </div>
-
-        <div class="fridge-id">
-            <strong>📧 Email Address:</strong><br>
-            <span id="fridgeEmail">Enter a fridge name first</span>
-        </div>
-        
-        <div class="fridge-id">
-            <strong>🆔 Fridge ID:</strong><br>
-            <span id="fridgeId">-</span>
-        </div>
-
-        <div class="status">
-            ✅ This fridge is ready to receive email notes!<br>
-            <small>Just email your notes to the address above and they'll appear instantly</small>
-        </div>
-        
-        <button class="copy-btn" onclick="copyEmailAddress()">
-            📋 Copy Email Address
-        </button>
-        
-        <button class="continue-btn" onclick="goToFridge()">
-            Continue to Fridge Display
-        </button>
     </div>
 
     <script>
-        let fridgeId = null;
-        let fridgeName = null;
-        
-        // Generate consistent fridge ID from name
-        function generateFridgeId(fridgeName) {
-            let hash = 0;
-            for (let i = 0; i < fridgeName.length; i++) {
-                const char = fridgeName.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            const baseId = Math.abs(hash).toString(36);
-            return (baseId + '000000000000').substring(0, 12);
-        }
-        
-        function updateFridgeSetup() {
-            const nameInput = document.getElementById('fridgeNameInput');
-            const rawName = nameInput.value.trim();
+        async function setupFridge() {
+            const fridgeName = document.getElementById('fridgeName').value.trim();
+            const setupBtn = document.getElementById('setupBtn');
+            const errorMessage = document.getElementById('errorMessage');
             
-            if (!rawName) {
-                document.getElementById('fridgeEmail').textContent = 'Enter a fridge name first';
-                document.getElementById('fridgeId').textContent = '-';
+            // Validate input
+            if (!fridgeName) {
+                showError('Please enter a name for your fridge');
                 return;
             }
             
-            fridgeName = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-            fridgeId = generateFridgeId(fridgeName);
+            // Generate a unique fridge ID
+            const fridgeId = generateFridgeId();
             
-            // Update display
-            const emailAddress = `incoming.magnet+${fridgeName}@gmail.com`;
-            document.getElementById('fridgeEmail').textContent = emailAddress;
-            document.getElementById('fridgeId').textContent = fridgeId;
-            
-            // Store in localStorage for fridge page
-            localStorage.setItem('fridgeId', fridgeId);
-            localStorage.setItem('fridgeName', fridgeName);
-            localStorage.setItem('fridgeEmail', emailAddress);
-        }
-        
-        function copyEmailAddress() {
-            const emailAddress = document.getElementById('fridgeEmail').textContent;
-            if (emailAddress && emailAddress !== 'Enter a fridge name first') {
-                navigator.clipboard.writeText(emailAddress).then(() => {
-                    alert('Email address copied! You can now send notes to this address.');
-                }).catch(() => {
-                    prompt('Copy this email address:', emailAddress);
+            try {
+                setupBtn.disabled = true;
+                setupBtn.textContent = '🔄 Creating...';
+                
+                // Store fridge info in localStorage
+                localStorage.setItem('fridgeId', fridgeId);
+                localStorage.setItem('fridgeName', fridgeName);
+                
+                // Generate shortcut and QR code
+                const response = await fetch('/api/generate-shortcut', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fridgeName: fridgeName,
+                        fridgeId: fridgeId
+                    })
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to generate shortcut');
+                }
+                
+                const result = await response.json();
+                
+                // Show success section
+                showSuccess(fridgeName, fridgeId, result);
+                
+            } catch (error) {
+                console.error('Setup error:', error);
+                showError('Failed to setup fridge. Please try again.');
+                setupBtn.disabled = false;
+                setupBtn.textContent = '🚀 Create My Fridge';
             }
         }
         
-        function goToFridge() {
-            if (fridgeId) {
-                window.location.href = `/fridge.html?id=${fridgeId}`;
-            } else {
-                alert('Please enter a fridge name first!');
-            }
+        function generateFridgeId() {
+            return 'fridge_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         }
         
-        // Load saved name if returning user
-        window.onload = function() {
-            const savedName = localStorage.getItem('fridgeName');
-            if (savedName) {
-                const displayName = savedName.charAt(0).toUpperCase() + savedName.slice(1);
-                document.getElementById('fridgeNameInput').value = displayName;
-                updateFridgeSetup();
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showSuccess(fridgeName, fridgeId, shortcutData) {
+            // Hide setup form
+            document.getElementById('setupForm').style.display = 'none';
+            
+            // Populate success info
+            document.getElementById('displayFridgeName').textContent = fridgeName;
+            document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
+            document.getElementById('displayFridgeId').textContent = fridgeId;
+            
+            // Set QR code
+            document.getElementById('qrCodeImage').src = shortcutData.qrCode;
+            
+            // Populate instructions
+            const instructionsList = document.getElementById('instructionsList');
+            instructionsList.innerHTML = '';
+            shortcutData.instructions.forEach(instruction => {
+                const li = document.createElement('li');
+                li.textContent = instruction;
+                instructionsList.appendChild(li);
+            });
+            
+            // Set download link
+            document.getElementById('directDownload').href = shortcutData.shortcutUrl;
+            
+            // Set fridge link
+            document.getElementById('goToFridgeBtn').href = `/fridge.html?id=${fridgeId}`;
+            
+            // Show success section
+            document.getElementById('successSection').classList.add('show');
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('fridgeName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                setupFridge();
             }
-        };
+        });
     </script>
 </body>
 </html>
