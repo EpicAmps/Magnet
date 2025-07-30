@@ -134,7 +134,6 @@
         </div>
         
         <h1>Install Shortcut</h1>
-        <p style="font-size: 12px;">Version: January 30, 2025 - 3:47 PM</p>
         <p class="subtitle" id="subtitle">Add shortcut to your iPhone</p>
         
         <button class="install-btn" id="installBtn" onclick="installShortcut()">
@@ -183,163 +182,11 @@
             showLoading();
             
             try {
-                // Use the exact structure from your working shortcut
-                const shortcutActions = [
-                    {
-                        "WFWorkflowActionIdentifier": "is.workflow.actions.detect.text",
-                        "WFWorkflowActionParameters": {
-                            "WFTextActionText": {
-                                "Value": {
-                                    "string": "___EXTENSIONINPUT___",
-                                    "attachmentsByRange": {
-                                        "{0, 21}": {
-                                            "Type": "ExtensionInput"
-                                        }
-                                    }
-                                },
-                                "WFSerializationType": "WFTextTokenString"
-                            }
-                        },
-                        "UUID": "E3A34049-87C3-432E-ABD6-4D43DB658753"
-                    },
-                    {
-                        "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
-                        "WFWorkflowActionParameters": {
-                            "WFHTTPHeaders": {
-                                "Value": {
-                                    "WFDictionaryFieldValueItems": [
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "Content-Type"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": "application/json"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        }
-                                    ]
-                                },
-                                "WFSerializationType": "WFDictionaryFieldValue"
-                            },
-                            "WFURL": "https://magnet-mu.vercel.app/api/note",
-                            "WFJSONValues": {
-                                "Value": {
-                                    "WFDictionaryFieldValueItems": [
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "to"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": `incoming.magnet+${fridgeName}@gmail.com`
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        },
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "from"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": "iOS"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        },
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "subject"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": "Note from iPhone"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        },
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "body"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": "___EXTENSIONINPUT___",
-                                                    "attachmentsByRange": {
-                                                        "{0, 21}": {
-                                                            "OutputUUID": "E3A34049-87C3-432E-ABD6-4D43DB658753",
-                                                            "OutputName": "Detected Text",
-                                                            "Type": "ActionOutput"
-                                                        }
-                                                    }
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        }
-                                    ]
-                                },
-                                "WFSerializationType": "WFDictionaryFieldValue"
-                            },
-                            "WFHTTPMethod": "POST"
-                        },
-                        "UUID": "76801EEC-7559-4F3F-8BA0-7770896E33C9"
-                    },
-                    {
-                        "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
-                        "WFWorkflowActionParameters": {
-                            "WFNotificationActionTitle": "Success!",
-                            "WFNotificationActionBody": `Note sent to ${fridgeName}`
-                        },
-                        "UUID": "848C416D-2050-4A87-95BD-4321DA552BE6"
-                    }
-                ];
-
-                // Try the absolute simplest workflow possible to test
-                const workflow = {
-                    "WFWorkflowClientVersion": "2607.0.2",
-                    "WFWorkflowMinimumClientVersion": 900,
-                    "WFWorkflowActions": [
-                        {
-                            "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
-                            "WFWorkflowActionParameters": {
-                                "WFNotificationActionTitle": "Test",
-                                "WFNotificationActionBody": `Hello from ${fridgeName}!`
-                            }
-                        }
-                    ]
-                };
-
-                // Encode the workflow for the URL
-                const workflowData = encodeURIComponent(JSON.stringify(workflow));
-                const shortcutName = encodeURIComponent(`Send to ${fridgeName}`);
-                
-                // Try a simpler shortcuts URL format first
-                const shortcutUrl = `shortcuts://create-workflow?name=${shortcutName}&url=https://magnet-mu.vercel.app/api/shortcut-config?fridgeId=${fridgeId}`;
+                // Instead of generating a massive URL, redirect to a much simpler one
+                const simpleShortcutUrl = `shortcuts://x-callback-url/import-workflow/?url=${encodeURIComponent(`https://magnet-mu.vercel.app/api/shortcut-config?fridgeId=${fridgeId}&name=${encodeURIComponent(fridgeName)}`)}&name=${encodeURIComponent(`Send to ${fridgeName}`)}`;
                 
                 // Try to open in Shortcuts app
-                window.location.href = shortcutUrl;
+                window.location.href = simpleShortcutUrl;
                 
                 // Show success message after a delay
                 setTimeout(() => {
@@ -350,7 +197,7 @@
                             If nothing happened, try copying this URL and pasting it in Safari:
                         </p>
                         <p style="word-break: break-all; font-size: 0.8rem; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px; margin-top: 10px;">
-                            ${shortcutUrl.substring(0, 100)}...
+                            ${simpleShortcutUrl}
                         </p>
                     `;
                 }, 2000);
