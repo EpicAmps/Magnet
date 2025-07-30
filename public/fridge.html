@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -456,56 +457,10 @@
             opacity: 0.7;
             font-style: italic;
         }
-        
-        /* Celebration overlay */
-        .celebration-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(46, 204, 113, 0.9);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            backdrop-filter: blur(5px);
-        }
-        
-        .celebration-overlay.show {
-            display: flex;
-            animation: celebrationFade 2s ease-in-out;
-        }
-        
-        .giant-check {
-            font-size: 15rem;
-            color: white;
-            text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
-            animation: checkBounce 1.5s ease-out;
-        }
-        
-        @keyframes celebrationFade {
-            0% { opacity: 0; }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-        
-        @keyframes checkBounce {
-            0% { transform: scale(0) rotate(-45deg); }
-            50% { transform: scale(1.2) rotate(0deg); }
-            70% { transform: scale(0.9) rotate(5deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
     </style>
 </head>
 <body>
     <div class="connection-status" id="connectionStatus">Connecting...</div>
-    
-    <!-- Celebration overlay -->
-    <div class="celebration-overlay" id="celebrationOverlay">
-        <div class="giant-check">✓</div>
-    </div>
     
     <div class="container">
         <div class="header">
@@ -560,6 +515,400 @@
         <div class="timestamp" id="timestamp"></div>
     </div>
 
-   <script type="text/javascript" src="tada.js"></script>
+    <script>
+        let eventSource = null;
+        let lastUpdate = 0;
+        let fridgeId = null;
+        let fridgeName = null;
+        let lastSSEMessage = Date.now();
+        let isSSEWorking = false;
+        let pollingInterval = null;
+        let lastManualCheck = 0;
+        
+        // Multi-note support
+        let allNotes = [];
+        let currentNoteIndex = 0;
+        
+        // Get fridge ID from URL parameter or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        fridgeId = urlParams.get('id') || getFromPath() || localStorage.getItem('fridgeId');
+        fridgeName = localStorage.getItem('fridgeName');
+        
+        function getFromPath() {
+            // Extract ID from paths like /fridge/abc123
+            const pathParts = window.location.pathname.split('/');
+            if (pathParts.length >= 3 && pathParts[1] === 'fridge') {
+                return pathParts[2];
+            }
+            return null;
+        }
+        
+        let lastPollingCheck = 0;
+        let nextPollingIn = 120; // 2 minutes in seconds
+        let countdownInterval = null;
+        
+        // Update display with fridge info
+        if (fridgeId && fridgeName) {
+            document.getElementById('fridgeIdInfo').textContent = fridgeId;
+            document.getElementById('fridgeEmailInfo').textContent = `incoming.magnet+${fridgeName}@gmail.com`;
+        } else {
+            // Redirect to setup if no fridge info
+            window.location.href = '/setup.html';
+        }
+        
+        function toggleInfo() {
+            const popup = document.getElementById('infoPopup');
+            popup.classList.toggle('show');
+        }
+        
+        function updateCountdown() {
+            const now = Date.now();
+            const timeSinceLastCheck = Math.floor((now - lastPollingCheck) / 1000);
+            const timeUntilNext = Math.max(0, 120 - timeSinceLastCheck);
+            
+            if (timeUntilNext > 0) {
+                const minutes = Math.floor(timeUntilNext / 60);
+                const seconds = timeUntilNext % 60;
+                document.getElementById('countdown').textContent = 
+                    ` • Next check in ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('countdown').textContent = ' • Checking now...';
+            }
+        }
+        
+        function startCountdown() {
+            lastPollingCheck = Date.now();
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(updateCountdown, 1000);
+            updateCountdown();
+        }
+        
+        const API_BASE = window.location.origin;
+        
+        function updateConnectionStatus(connected, method = '') {
+            // Update status text instead of separate indicator
+            if (connected) {
+                document.getElementById('statusText').textContent = '✅ Connected and ready';
+            } else {
+                document.getElementById('statusText').textContent = '🔄 Connecting...';
+            }
+        }
+        
+        function connectToNotifications() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            // Connect to fridge-specific ping endpoint
+            eventSource = new EventSource(`${API_BASE}/api/ping?fridgeId=${fridgeId}`);
+            
+            eventSource.onopen = () => {
+                console.log('Connected to notification service for fridge:', fridgeId);
+                isSSEWorking = true;
+                lastSSEMessage = Date.now();
+                updateConnectionStatus(true);
+                document.getElementById('statusText').textContent = '✅ Real-time updates active';
+            };
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received SSE notification:', data);
+                
+                // Update SSE health tracking
+                isSSEWorking = true;
+                lastSSEMessage = Date.now();
+                
+                if (data.type === 'note_updated') {
+                    document.getElementById('statusText').textContent = '📧 New note received instantly!';
+                    fetchNote();
+                } else if (data.type === 'connected') {
+                    document.getElementById('statusText').textContent = '✅ Real-time updates active';
+                }
+            };
+            
+            eventSource.onerror = (error) => {
+                console.error('SSE Error:', error);
+                isSSEWorking = false;
+                updateConnectionStatus(false);
+                document.getElementById('statusText').textContent = '🔄 Using backup checking';
+                
+                // Retry SSE connection in 10 seconds
+                setTimeout(connectToNotifications, 10000);
+            };
+        }
+        
+        function startPollingBackup() {
+            // Poll every 2 minutes as backup
+            pollingInterval = setInterval(() => {
+                const timeSinceLastSSE = Date.now() - lastSSEMessage;
+                const timeSinceLastManualCheck = Date.now() - lastManualCheck;
+                
+                // Only poll if:
+                // 1. SSE hasn't worked in the last 3 minutes, AND
+                // 2. We haven't manually checked in the last minute
+                if (timeSinceLastSSE > 180000 && timeSinceLastManualCheck > 60000) {
+                    console.log('SSE down, polling for updates...');
+                    fetchNoteViaPolling();
+                }
+            }, 120000); // Check every 2 minutes
+        }
+        
+        async function fetchNoteViaPolling() {
+            try {
+                const response = await fetch(`${API_BASE}/api/note?fridgeId=${fridgeId}`);
+                const data = await response.json();
+                
+                if (data.timestamp > lastUpdate) {
+                    console.log('Found new note via polling!');
+                    document.getElementById('statusText').textContent = '📧 New note found!';
+                    updateNoteDisplay(data);
+                } else {
+                    // No new notes, but polling is working - show connected
+                    updateConnectionStatus(true);
+                    document.getElementById('statusText').textContent = '✅ Up to date';
+                }
+                
+                startCountdown(); // Reset countdown
+                lastManualCheck = Date.now();
+            } catch (error) {
+                console.error('Polling error:', error);
+                updateConnectionStatus(false);
+            }
+        }
+        
+        async function fetchNote() {
+            try {
+                const response = await fetch(`${API_BASE}/api/note?fridgeId=${fridgeId}`);
+                const data = await response.json();
+                
+                // Handle multiple notes or single note response
+                if (Array.isArray(data)) {
+                    allNotes = data.sort((a, b) => b.timestamp - a.timestamp); // Sort newest first
+                    currentNoteIndex = 0; // Start with newest note
+                    updateNoteDisplay(allNotes[currentNoteIndex]);
+                    updatePagination();
+                } else {
+                    // Single note response (backward compatibility)
+                    allNotes = data.content ? [data] : [];
+                    currentNoteIndex = 0;
+                    updateNoteDisplay(data);
+                    updatePagination();
+                }
+                
+                // Show that manual refresh worked
+                updateConnectionStatus(true);
+                lastManualCheck = Date.now();
+            } catch (error) {
+                console.error('Error fetching note:', error);
+                document.getElementById('noteContent').innerHTML = 
+                    '<div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing</div>';
+                document.getElementById('statusText').textContent = '❌ Connection error';
+                updateConnectionStatus(false);
+            }
+        }
+        
+        function updateNoteDisplay(data) {
+            if (!data || (!data.content && !data.timestamp)) {
+                document.getElementById('noteContent').innerHTML = 
+                    '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
+                document.getElementById('statusText').textContent = '⏳ No notes yet';
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+            
+            if (data.timestamp > lastUpdate || true) { // Always update when navigating
+                const content = data.content || 'No content received';
+                
+                // Show better status messages
+                if (content.includes('No notes yet')) {
+                    document.getElementById('noteContent').innerHTML = 
+                        '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
+                    document.getElementById('statusText').textContent = '⏳ No notes yet';
+                } else if (content.includes('Error loading')) {
+                    document.getElementById('noteContent').innerHTML = 
+                        '<div class="empty-state">❌ Error loading note<br><br>Try refreshing or send a new note</div>';
+                    document.getElementById('statusText').textContent = '❌ Error loading note';
+                } else {
+                    // Display HTML content (from markdown) or plain text
+                    let displayContent = content;
+                    
+                    // Remove iOS Shortcut attribution if present
+                    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
+                    displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
+                    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+                    displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
+                    displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
+                    
+                    if (displayContent.includes('<') && displayContent.includes('>')) {
+                        // Content contains HTML (from markdown processing)
+                        document.getElementById('noteContent').innerHTML = displayContent;
+                    } else {
+                        // Plain text content
+                        document.getElementById('noteContent').innerHTML = displayContent.replace(/\n/g, '<br>');
+                    }
+                    
+                    // Update status based on current note
+                    const noteNumber = allNotes.length > 1 ? ` (${currentNoteIndex + 1}/${allNotes.length})` : '';
+                    document.getElementById('statusText').textContent = `📧 Note from ${data.sender || 'someone'}${noteNumber}`;
+                }
+                
+                document.getElementById('timestamp').textContent = 
+                    `Last updated: ${new Date(data.timestamp).toLocaleString()}`;
+                lastUpdate = Math.max(lastUpdate, data.timestamp);
+            }
+        }
+        
+        // Pagination functions
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            if (allNotes.length <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            pagination.style.display = 'flex';
+            pageInfo.textContent = `${currentNoteIndex + 1} of ${allNotes.length}`;
+            
+            prevBtn.disabled = currentNoteIndex === 0;
+            nextBtn.disabled = currentNoteIndex === allNotes.length - 1;
+        }
+        
+        function previousNote() {
+            if (currentNoteIndex > 0) {
+                currentNoteIndex--;
+                updateNoteDisplay(allNotes[currentNoteIndex]);
+                updatePagination();
+            }
+        }
+        
+        function nextNote() {
+            if (currentNoteIndex < allNotes.length - 1) {
+                currentNoteIndex++;
+                updateNoteDisplay(allNotes[currentNoteIndex]);
+                updatePagination();
+            }
+        }
+        
+        async function deleteNote() {
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this note?')) {
+                return;
+            }
+            
+            try {
+                updateConnectionStatus(true);
+                document.getElementById('statusText').textContent = '🗑️ Deleting note...';
+                
+                // Send delete request to API for current note
+                const currentNote = allNotes[currentNoteIndex];
+                const response = await fetch(`${API_BASE}/api/note`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        fridgeId: fridgeId,
+                        noteId: currentNote.id || currentNote.timestamp // Use ID or timestamp
+                    })
+                });
+                
+                if (response.ok) {
+                    // Remove note from local array
+                    allNotes.splice(currentNoteIndex, 1);
+                    
+                    // Adjust current index if needed
+                    if (currentNoteIndex >= allNotes.length && allNotes.length > 0) {
+                        currentNoteIndex = allNotes.length - 1;
+                    }
+                    
+                    if (allNotes.length > 0) {
+                        // Show remaining note
+                        updateNoteDisplay(allNotes[currentNoteIndex]);
+                        updatePagination();
+                        document.getElementById('statusText').textContent = '✅ Note deleted successfully!';
+                    } else {
+                        // No notes left
+                        document.getElementById('noteContent').innerHTML = 
+                            '<div class="empty-state">📱 Note deleted!<br><br>Send a new email to see it here!</div>';
+                        document.getElementById('pagination').style.display = 'none';
+                        document.getElementById('statusText').textContent = '✅ All notes deleted!';
+                        lastUpdate = 0;
+                    }
+                    
+                    document.getElementById('timestamp').textContent = 
+                        `Deleted: ${new Date().toLocaleString()}`;
+                    
+                } else {
+                    throw new Error('Failed to delete note');
+                }
+                
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                document.getElementById('statusText').textContent = '❌ Error deleting note. Try again.';
+            }
+        }
+        
+        function goToSetup() {
+            window.location.href = '/setup.html';
+        }
+        
+        // Initialize hybrid system
+        if (fridgeId) {
+            console.log('Starting hybrid notification system...');
+            
+            // Start real-time connection
+            connectToNotifications();
+            
+            // Start polling backup
+            startPollingBackup();
+            
+            // Initial note fetch
+            fetchNote();
+            
+            // Add click handlers for task list items
+            setupTaskListInteraction();
+            
+            // Start countdown timer
+            startCountdown();
+        }
+        
+        // Make entire task list rows clickable
+        function setupTaskListInteraction() {
+            // Use event delegation to handle dynamically added content
+            document.getElementById('noteContent').addEventListener('click', function(event) {
+                const listItem = event.target.closest('li');
+                
+                // Only handle list items that contain checkboxes
+                if (listItem && listItem.querySelector('input[type="checkbox"]')) {
+                    const checkbox = listItem.querySelector('input[type="checkbox"]');
+                    
+                    // Don't double-toggle if user clicked directly on checkbox
+                    if (event.target.type !== 'checkbox') {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                    
+                    // Add visual feedback
+                    listItem.style.backgroundColor = checkbox.checked ? 
+                        'rgba(46, 204, 113, 0.2)' :  // Green tint when checked
+                        '';  // Remove background when unchecked
+                }
+            });
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (eventSource) {
+                eventSource.close();
+            }
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        });
+    </script>
 </body>
 </html>
