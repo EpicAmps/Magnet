@@ -1,5 +1,10 @@
 // /api/generate-shortcut.js - Dynamic Shortcut Generator for Vercel
 export default async function handler(req, res) {
+
+  // Add this right after creating shortcutUrl:
+console.log('Shortcut URL length:', shortcutUrl.length);
+console.log('First 200 chars:', shortcutUrl.substring(0, 200));
+  
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
