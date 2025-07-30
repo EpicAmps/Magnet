@@ -399,28 +399,28 @@
         </div>
         
         <h1>Magnet Setup</h1>
-        <p class="subtitle">Share mobile notes to your Samsung Smart Fridge. You're welcome. ;)</p>
+        <p class="subtitle">Connect your Samsung Smart Fridge to receive notes from your iPhone</p>
         
         <div class="error-message" id="errorMessage"></div>
         
         <!-- Setup Form -->
         <div class="setup-form" id="setupForm">
             <div class="form-group">
-                <label for="fridgeName">Your Fridge's Name</label>
-                <input type="text" id="fridgeName" placeholder="Kitchen, Garage, Office..." required>
+                <label for="fridgeName">Enter Your Fridge Name</label>
+                <input type="text" id="fridgeName" placeholder="Enter the name you gave your fridge (Kitchen, Garage, etc.)" required>
             </div>
             
             <button class="setup-btn" id="setupBtn" onclick="setupFridge()">
-                🚀 Create Fridge Setup
+                🔗 Connect My Fridge
             </button>
         </div>
         
         <!-- Success Section -->
         <div class="success-section" id="successSection">
-            <h2 class="success-title">🎉 Success!</h2>
+            <h2 class="success-title">🎉 Connected!</h2>
             
             <div class="fridge-info">
-                <h3>📧 Your Fridge Details</h3>
+                <h3>🔗 Your Connected Fridge</h3>
                 <div class="info-item">
                     <strong>Name:</strong> <span id="displayFridgeName"></span>
                 </div>
@@ -555,7 +555,7 @@
             const errorMessage = document.getElementById('errorMessage');
             
             if (!fridgeName) {
-                showError('Please enter your fridge name');
+                showError('Please enter a name for your fridge');
                 return;
             }
             
@@ -588,14 +588,22 @@
                 
             } catch (error) {
                 console.error('Setup error:', error);
-                showError('Failed to setup fridge. Please try again.');
+                showError('Failed to connect to your fridge. Please try again.');
                 setupBtn.disabled = false;
-                setupBtn.textContent = '🚀 Create My Fridge';
+                setupBtn.textContent = '🔗 Connect My Fridge';
             }
         }
         
-        function generateFridgeId() {
-            return 'fridge_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        function generateFridgeId(fridgeName) {
+            // Create consistent hash from fridge name so same name = same ID
+            let hash = 0;
+            const str = fridgeName.toLowerCase().trim();
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return 'fridge_' + Math.abs(hash).toString(36);
         }
         
         function showError(message) {
