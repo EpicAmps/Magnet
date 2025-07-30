@@ -1,4 +1,116 @@
-<!DOCTYPE html>
+function showSuccess(fridgeName, fridgeId, shortcutData) {
+            // Hide setup form
+            document.getElementById('setupForm').style.display = 'none';
+            
+            // Populate success info
+            document.getElementById('displayFridgeName').textContent = fridgeName;
+            document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
+            document.getElementById('displayFridgeId').textContent = fridgeId;
+            
+            // Set up installation options
+            document.getElementById('qrCodeImage').src = shortcutData.qrCode;
+            
+            // Populate the manual instruction fields
+            document.getElementById('fridgeIdField').textContent = fridgeId;
+            
+            // Set fridge link
+            document.getElementById('goToFridgeBtn').href = `/fridge.html?id=${fridgeId}`;
+            
+            // Store for email function
+            window.currentFridgeData = { fridgeName, fridgeId, shortcutUrl: shortcutData.shortcutUrl };
+            
+            // Show success section
+            document.getElementById('successSection').classList.add('show');
+        }
+        
+        async function emailShortcut() {
+            const emailInput = document.getElementById('emailInput');
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            try {
+                const button = event.target;
+                button.disabled = true;
+                button.textContent = '📧 Sending...';
+                
+                const response = await fetch('/api/send-shortcut-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        fridgeName: window.currentFridgeData.fridgeName,
+                        fridgeId: window.currentFridgeData.fridgeId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    button.textContent = '✅ Sent!';
+                    button.style.background = '#28A745';
+                    
+                    if (result.debug && !result.debug.hasApiKey) {
+                        alert('📧 Email sending is not configured yet, but the shortcut would be sent to: ' + email + '\n\nFor now, please use the QR code method.');
+                        console.log('Debug info:', result.debug);
+                    } else {
+                        alert('📧 Shortcut sent to your email! Check your inbox and tap the attachment to install.');
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to send email');
+                }
+                
+            } catch (error) {
+                console.error('Email error:', error);
+                alert('❌ Failed to send email. Please try the QR code method instead.');
+                event.target.disabled = false;
+                event.target.textContent = 'Send Email';
+            }
+        }
+        
+        async function initiateQuickShare() {
+            const button = event.target;
+            
+            try {
+                // Check if Web Share API is available (supported on Samsung browsers)
+                if (navigator.share) {
+                    button.textContent = '📲 Opening Quick Share...';
+                    
+                    // Download the shortcut file first
+                    const response = await fetch(window.currentFridgeData.shortcutUrl);
+                    const blob = await response.blob();
+                    
+                    // Create a File object
+                    const file = new File([blob], 'Send to Magnet.shortcut', {
+                        type: 'application/octet-stream'
+                    });
+                    
+                    // Use Web Share API to share the file
+                    await navigator.share({
+                        title: 'Send to Magnet Shortcut',
+                        text: 'Install this shortcut to send notes to your ' + window.currentFridgeData.fridgeName + ' fridge!',
+                        files: [file]
+                    });
+                    
+                    button.textContent = '✅ Shared!';
+                    button.style.background = '#28A745';
+                    
+                } else {
+                    // Fallback: download the file and show instructions
+                    button.textContent = '📥 Downloading...';
+                    
+                    // Create download link
+                    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -478,30 +590,33 @@
                 <!-- Easy Options -->
                 <div class="install-options">
                     
-                    <!-- Option 1: Direct Download -->
-                    <div class="install-option">
-                        <div class="option-icon">📥</div>
-                        <div class="option-content">
-                            <h4>Direct Download</h4>
-                            <p>Tap to download and install instantly</p>
-                            <a href="#" id="directDownload" class="install-btn primary">
-                                📱 Download Shortcut
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Option 2: Email Me -->
+                    <!-- Option 1: Email Me -->
                     <div class="install-option">
                         <div class="option-icon">📧</div>
                         <div class="option-content">
                             <h4>Email Me the Shortcut</h4>
-                            <p>Get it sent to your email as an attachment</p>
+                            <p>Get it sent to your email as an attachment (Recommended)</p>
                             <div class="email-form">
                                 <input type="email" id="emailInput" placeholder="your@email.com" />
-                                <button onclick="emailShortcut()" class="install-btn secondary">
+                                <button onclick="emailShortcut()" class="install-btn primary">
                                     Send Email
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Option 2: Samsung Quick Share -->
+                    <div class="install-option">
+                        <div class="option-icon">📲</div>
+                        <div class="option-content">
+                            <h4>Samsung Quick Share</h4>
+                            <p>Share directly to your Samsung phone via Bluetooth/WiFi</p>
+                            <button onclick="initiateQuickShare()" class="install-btn secondary">
+                                📲 Quick Share to Samsung
+                            </button>
+                            <p style="font-size: 0.85rem; color: #666; margin-top: 8px;">
+                                Works with Samsung Galaxy phones nearby
+                            </p>
                         </div>
                     </div>
                     
