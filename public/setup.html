@@ -197,8 +197,194 @@
             font-weight: 600;
         }
         
-        .alt-link a:hover {
-            text-decoration: underline;
+        .manual-instructions {
+            text-align: left;
+        }
+        
+        .step {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            background: #007AFF;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+        
+        .step-content {
+            flex: 1;
+            color: #333;
+        }
+        
+        .step-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .json-fields {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .json-fields div {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .install-options {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .install-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            transition: border-color 0.3s;
+        }
+        
+        .install-option:hover {
+            border-color: #007AFF;
+        }
+        
+        .option-icon {
+            font-size: 40px;
+            flex-shrink: 0;
+        }
+        
+        .option-content {
+            flex: 1;
+        }
+        
+        .option-content h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+        
+        .option-content p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .install-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .install-btn.primary {
+            background: #007AFF;
+            color: white;
+        }
+        
+        .install-btn.primary:hover {
+            background: #0056CC;
+        }
+        
+        .install-btn.secondary {
+            background: #34C759;
+            color: white;
+        }
+        
+        .install-btn.secondary:hover {
+            background: #28A745;
+        }
+        
+        .email-form {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .email-form input {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        .qr-code {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .qr-code img {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        
+        .qr-instructions {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .manual-toggle {
+            text-align: center;
+            margin: 30px 0 20px 0;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        .manual-toggle-btn {
+            background: none;
+            border: 1px solid #ccc;
+            color: #666;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .manual-toggle-btn:hover {
+            background: #f5f5f5;
         }
         
         .go-to-fridge {
@@ -283,20 +469,136 @@
             </div>
             
             <div class="qr-section">
-                <h3 class="qr-title">📱 Install iPhone Shortcut</h3>
+                <h3 class="qr-title">📱 Get Your iPhone Shortcut</h3>
                 
-                <div class="qr-code">
-                    <img id="qrCodeImage" src="" alt="QR Code" width="250" height="250">
+                <p style="margin-bottom: 25px; color: #555; font-size: 16px;">
+                    Choose the easiest way for you to install the shortcut:
+                </p>
+                
+                <!-- Easy Options -->
+                <div class="install-options">
+                    
+                    <!-- Option 1: Direct Download -->
+                    <div class="install-option">
+                        <div class="option-icon">📥</div>
+                        <div class="option-content">
+                            <h4>Direct Download</h4>
+                            <p>Tap to download and install instantly</p>
+                            <a href="#" id="directDownload" class="install-btn primary">
+                                📱 Download Shortcut
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Option 2: Email Me -->
+                    <div class="install-option">
+                        <div class="option-icon">📧</div>
+                        <div class="option-content">
+                            <h4>Email Me the Shortcut</h4>
+                            <p>Get it sent to your email as an attachment</p>
+                            <div class="email-form">
+                                <input type="email" id="emailInput" placeholder="your@email.com" />
+                                <button onclick="emailShortcut()" class="install-btn secondary">
+                                    Send Email
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Option 3: QR Code -->
+                    <div class="install-option">
+                        <div class="option-icon">📷</div>
+                        <div class="option-content">
+                            <h4>Scan QR Code</h4>
+                            <p>Use iPhone Camera to scan and install</p>
+                            <div class="qr-code">
+                                <img id="qrCodeImage" src="" alt="QR Code" width="150" height="150">
+                            </div>
+                            <p class="qr-instructions">Open Camera → Point at code → Tap notification</p>
+                        </div>
+                    </div>
+                    
                 </div>
                 
-                <ul class="instructions" id="instructionsList">
-                    <!-- Instructions will be populated by JavaScript -->
-                </ul>
+                <!-- Fallback for power users -->
+                <div class="manual-toggle">
+                    <button onclick="toggleManualInstructions()" class="manual-toggle-btn">
+                        🔧 Advanced: Manual Setup Instructions
+                    </button>
+                </div>
                 
-                <div class="alt-link">
-                    <a href="#" id="directDownload" target="_blank">
-                        Or tap here to download directly
-                    </a>
+                <div class="manual-instructions" id="manualInstructions" style="display: none;">
+                    <h4 style="margin-bottom: 15px;">Manual Setup (for advanced users):</h4>
+                    
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            Open Shortcuts app → Tap "+" to create new
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            Add "Get Text from Input" action
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            Add "Get Contents of URL" → Set Method to POST<br>
+                            URL: <code id="apiUrl">https://magnet-mu.vercel.app/api/note</code>
+                            <button onclick="copyToClipboard('apiUrl')" class="copy-btn">📋</button>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            Set JSON body with:<br>
+                            <div class="json-fields">
+                                <div>fridgeId: <code id="fridgeIdField"></code> <button onclick="copyToClipboard('fridgeIdField')" class="copy-btn">📋</button></div>
+                                <div>content: <em>[Select "Text from Input"]</em></div>
+                                <div>sender: <code>"iPhone"</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            Add "Show Notification" → Enable "Use with Share Sheet"
+                        </div>
+                    </div>
+                </div>
+            </div>d('successMessage')" class="copy-btn">📋 Copy</button>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">8</div>
+                        <div class="step-content">
+                            <strong>Enable Share Sheet</strong><br>
+                            • Tap the settings icon<br>
+                            • Enable "Use with Share Sheet"<br>
+                            • Choose content types: Text, Safari Web Pages, etc.
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">9</div>
+                        <div class="step-content">
+                            <strong>Name Your Shortcut</strong><br>
+                            Name it "Send to Magnet" and tap "Done"
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="video-link" style="margin-top: 20px; text-align: center;">
+                    <p style="color: #777; font-size: 14px;">
+                        🎥 <a href="#" style="color: #3498db;">Watch setup video</a> (coming soon)
+                    </p>
                 </div>
             </div>
             
@@ -383,26 +685,106 @@
             document.getElementById('displayFridgeEmail').textContent = shortcutData.fridgeEmail;
             document.getElementById('displayFridgeId').textContent = fridgeId;
             
-            // Set QR code
+            // Set up installation options
+            document.getElementById('directDownload').href = shortcutData.shortcutUrl;
             document.getElementById('qrCodeImage').src = shortcutData.qrCode;
             
-            // Populate instructions
-            const instructionsList = document.getElementById('instructionsList');
-            instructionsList.innerHTML = '';
-            shortcutData.instructions.forEach(instruction => {
-                const li = document.createElement('li');
-                li.textContent = instruction;
-                instructionsList.appendChild(li);
-            });
-            
-            // Set download link
-            document.getElementById('directDownload').href = shortcutData.shortcutUrl;
+            // Populate the manual instruction fields
+            document.getElementById('fridgeIdField').textContent = fridgeId;
             
             // Set fridge link
             document.getElementById('goToFridgeBtn').href = `/fridge.html?id=${fridgeId}`;
             
+            // Store for email function
+            window.currentFridgeData = { fridgeName, fridgeId };
+            
             // Show success section
             document.getElementById('successSection').classList.add('show');
+        }
+        
+        async function emailShortcut() {
+            const emailInput = document.getElementById('emailInput');
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                alert('Please enter your email address');
+                return;
+            }
+            
+            if (!email.includes('@')) {
+                alert('Please enter a valid email address');
+                return;
+            }
+            
+            try {
+                const button = event.target;
+                button.disabled = true;
+                button.textContent = '📧 Sending...';
+                
+                const response = await fetch('/api/send-shortcut-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        fridgeName: window.currentFridgeData.fridgeName,
+                        fridgeId: window.currentFridgeData.fridgeId
+                    })
+                });
+                
+                if (response.ok) {
+                    button.textContent = '✅ Sent!';
+                    button.style.background = '#28A745';
+                    alert('📧 Shortcut sent to your email! Check your inbox and tap the attachment to install.');
+                } else {
+                    throw new Error('Failed to send email');
+                }
+                
+            } catch (error) {
+                console.error('Email error:', error);
+                alert('❌ Failed to send email. Please try the direct download instead.');
+                event.target.disabled = false;
+                event.target.textContent = 'Send Email';
+            }
+        }
+        
+        function toggleManualInstructions() {
+            const instructions = document.getElementById('manualInstructions');
+            const button = event.target;
+            
+            if (instructions.style.display === 'none') {
+                instructions.style.display = 'block';
+                button.textContent = '🔧 Hide Manual Instructions';
+            } else {
+                instructions.style.display = 'none';  
+                button.textContent = '🔧 Advanced: Manual Setup Instructions';
+            }
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary feedback
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#28a745';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                // Fallback: select the text
+                const range = document.createRange();
+                range.selectNode(element);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+            });
         }
         
         // Allow Enter key to submit
