@@ -182,10 +182,10 @@
             showLoading();
             
             try {
-                // Define the shortcut actions (same as in your API)
+                // Use the exact structure from your working shortcut
                 const shortcutActions = [
                     {
-                        "WFWorkflowActionIdentifier": "is.workflow.actions.gettext",
+                        "WFWorkflowActionIdentifier": "is.workflow.actions.detect.text",
                         "WFWorkflowActionParameters": {
                             "WFTextActionText": {
                                 "Value": {
@@ -198,13 +198,34 @@
                                 },
                                 "WFSerializationType": "WFTextTokenString"
                             }
-                        }
+                        },
+                        "UUID": "E3A34049-87C3-432E-ABD6-4D43DB658753"
                     },
                     {
                         "WFWorkflowActionIdentifier": "is.workflow.actions.downloadurl",
                         "WFWorkflowActionParameters": {
-                            "WFHTTPMethod": "POST",
-                            "WFHTTPBodyType": "JSON",
+                            "WFHTTPHeaders": {
+                                "Value": {
+                                    "WFDictionaryFieldValueItems": [
+                                        {
+                                            "WFItemType": 0,
+                                            "WFKey": {
+                                                "Value": {
+                                                    "string": "Content-Type"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            },
+                                            "WFValue": {
+                                                "Value": {
+                                                    "string": "application/json"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            }
+                                        }
+                                    ]
+                                },
+                                "WFSerializationType": "WFDictionaryFieldValue"
+                            },
                             "WFURL": "https://magnet-mu.vercel.app/api/note",
                             "WFJSONValues": {
                                 "Value": {
@@ -213,13 +234,13 @@
                                             "WFItemType": 0,
                                             "WFKey": {
                                                 "Value": {
-                                                    "string": "fridgeId"
+                                                    "string": "to"
                                                 },
                                                 "WFSerializationType": "WFTextTokenString"
                                             },
                                             "WFValue": {
                                                 "Value": {
-                                                    "string": fridgeId
+                                                    "string": `incoming.magnet+${fridgeName}@gmail.com`
                                                 },
                                                 "WFSerializationType": "WFTextTokenString"
                                             }
@@ -228,7 +249,37 @@
                                             "WFItemType": 0,
                                             "WFKey": {
                                                 "Value": {
-                                                    "string": "content"
+                                                    "string": "from"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            },
+                                            "WFValue": {
+                                                "Value": {
+                                                    "string": "iOS"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            }
+                                        },
+                                        {
+                                            "WFItemType": 0,
+                                            "WFKey": {
+                                                "Value": {
+                                                    "string": "subject"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            },
+                                            "WFValue": {
+                                                "Value": {
+                                                    "string": "Note from iPhone"
+                                                },
+                                                "WFSerializationType": "WFTextTokenString"
+                                            }
+                                        },
+                                        {
+                                            "WFItemType": 0,
+                                            "WFKey": {
+                                                "Value": {
+                                                    "string": "body"
                                                 },
                                                 "WFSerializationType": "WFTextTokenString"
                                             },
@@ -237,26 +288,11 @@
                                                     "string": "___EXTENSIONINPUT___",
                                                     "attachmentsByRange": {
                                                         "{0, 21}": {
-                                                            "OutputUUID": "TEXT_OUTPUT_UUID",
-                                                            "OutputName": "Text",
+                                                            "OutputUUID": "E3A34049-87C3-432E-ABD6-4D43DB658753",
+                                                            "OutputName": "Detected Text",
                                                             "Type": "ActionOutput"
                                                         }
                                                     }
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            }
-                                        },
-                                        {
-                                            "WFItemType": 0,
-                                            "WFKey": {
-                                                "Value": {
-                                                    "string": "sender"
-                                                },
-                                                "WFSerializationType": "WFTextTokenString"
-                                            },
-                                            "WFValue": {
-                                                "Value": {
-                                                    "string": "iPhone"
                                                 },
                                                 "WFSerializationType": "WFTextTokenString"
                                             }
@@ -264,15 +300,18 @@
                                     ]
                                 },
                                 "WFSerializationType": "WFDictionaryFieldValue"
-                            }
-                        }
+                            },
+                            "WFHTTPMethod": "POST"
+                        },
+                        "UUID": "76801EEC-7559-4F3F-8BA0-7770896E33C9"
                     },
                     {
                         "WFWorkflowActionIdentifier": "is.workflow.actions.notification",
                         "WFWorkflowActionParameters": {
                             "WFNotificationActionTitle": "Success!",
-                            "WFNotificationActionBody": `Note saved to ${fridgeName} successfully`
-                        }
+                            "WFNotificationActionBody": `Note sent to ${fridgeName}`
+                        },
+                        "UUID": "848C416D-2050-4A87-95BD-4321DA552BE6"
                     }
                 ];
 
@@ -303,8 +342,8 @@
                 const workflowData = encodeURIComponent(JSON.stringify(workflow));
                 const shortcutName = encodeURIComponent(`Send to ${fridgeName}`);
                 
-                // Create the shortcuts:// URL
-                const shortcutUrl = `shortcuts://import-workflow/?name=${shortcutName}&workflow=${workflowData}`;
+                // Try a simpler shortcuts URL format first
+                const shortcutUrl = `shortcuts://create-workflow?name=${shortcutName}&url=https://magnet-mu.vercel.app/api/shortcut-config?fridgeId=${fridgeId}`;
                 
                 // Try to open in Shortcuts app
                 window.location.href = shortcutUrl;
