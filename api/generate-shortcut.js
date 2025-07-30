@@ -1,10 +1,5 @@
 // /api/generate-shortcut.js - Dynamic Shortcut Generator for Vercel
 export default async function handler(req, res) {
-
-  // Add this right after creating shortcutUrl:
-console.log('Shortcut URL length:', shortcutUrl.length);
-console.log('First 200 chars:', shortcutUrl.substring(0, 200));
-  
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -134,11 +129,18 @@ console.log('First 200 chars:', shortcutUrl.substring(0, 200));
       "WFWorkflowActions": shortcutActions
     };
 
-    // Encode the workflow for the URL
+    // Encode the workflow for the URL (for debugging)
     const workflowData = encodeURIComponent(JSON.stringify(workflow));
     const shortcutName = encodeURIComponent(`Send to ${fridgeName}`);
     
-   // Create a short redirect URL instead of the massive shortcuts:// URL
+    // Create the full shortcuts URL (for debugging)
+    const fullShortcutUrl = `shortcuts://import-workflow/?name=${shortcutName}&workflow=${workflowData}`;
+    
+    // Log the massive URL length
+    console.log('Full shortcut URL length:', fullShortcutUrl.length);
+    console.log('First 200 chars:', fullShortcutUrl.substring(0, 200));
+    
+    // Create a short redirect URL instead of the massive shortcuts:// URL
     const baseUrl = req.headers.origin || `https://${req.headers.host}` || 'https://magnet-mu.vercel.app';
     const redirectUrl = `${baseUrl}/install-shortcut?fridgeId=${fridgeId}&name=${encodeURIComponent(fridgeName)}`;
     
@@ -149,15 +151,15 @@ console.log('First 200 chars:', shortcutUrl.substring(0, 200));
     res.status(200).json({
       success: true,
       qrCode: qrCodeUrl,
-      shortcutUrl: shortcutUrl,
+      shortcutUrl: redirectUrl,  // Return the short redirect URL, not the massive one
       fridgeName: fridgeName,
       fridgeEmail: `incoming.magnet+${fridgeName}@gmail.com`,
       instructions: [
         "1. Open Camera app on your iPhone",
         "2. Point camera at the QR code below", 
         "3. Tap the notification that appears",
-        "4. This will open the Shortcuts app",
-        "5. Tap 'Add Shortcut' to install",
+        "4. This will open the installation page",
+        "5. Tap the button to add the shortcut",
         "6. The shortcut will appear in your share sheet as 'Send to " + fridgeName + "'"
       ]
     });
