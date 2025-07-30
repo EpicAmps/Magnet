@@ -138,11 +138,12 @@ console.log('First 200 chars:', shortcutUrl.substring(0, 200));
     const workflowData = encodeURIComponent(JSON.stringify(workflow));
     const shortcutName = encodeURIComponent(`Send to ${fridgeName}`);
     
-    // Create the shortcuts:// URL that opens directly in Shortcuts app
-    const shortcutUrl = `shortcuts://import-workflow/?name=${shortcutName}&workflow=${workflowData}`;
+   // Create a short redirect URL instead of the massive shortcuts:// URL
+    const baseUrl = req.headers.origin || `https://${req.headers.host}` || 'https://magnet-mu.vercel.app';
+    const redirectUrl = `${baseUrl}/install-shortcut?fridgeId=${fridgeId}&name=${encodeURIComponent(fridgeName)}`;
     
-    // Generate QR code for the shortcut URL
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shortcutUrl)}`;
+    // Generate QR for the short redirect URL instead
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(redirectUrl)}`;
 
     // Return the QR code URL and shortcut info
     res.status(200).json({
