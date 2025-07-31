@@ -82,11 +82,11 @@ export default async function handler(req, res) {
         }
         
         // Notify connected fridges
-        const { notifyFridges } = await import('./ping.js');
-        notifyFridges('note_deleted', { 
-          message: 'Note deleted',
-          fridgeId: fridgeId
-        });
+        // const { notifyFridges } = await import('./ping.js');
+        // notifyFridges('note_deleted', { 
+        //   message: 'Note deleted',
+        //   fridgeId: fridgeId
+        // });
         
         return res.json({ 
           success: true, 
