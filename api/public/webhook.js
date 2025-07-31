@@ -134,6 +134,80 @@ export default async function handler(req, res) {
     } else {
       noteContent = formatEmailAsNote(subject, text, from);
     }
+
+    // Add this function to your webhook.js (around line 130, before the noteData creation)
+
+    async function fetchExistingNotes(fridgeId) {
+      try {
+        const blobKey = `fridge-${fridgeId}.json`;
+        const response = await fetch(`https://blob.vercel-storage.com/${blobKey}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Handle both old format (single note) and new format (multiple notes)
+          if (data.notes && Array.isArray(data.notes)) {
+            return data; // New format
+          } else if (data.content) {
+            return { notes: [data] }; // Convert old format to new
+          }
+        }
+      } catch (error) {
+        console.log('No existing notes found or error fetching:', error.message);
+      }
+      
+      return { notes: [] }; // Return empty if none found
+    }
+    
+    // Then replace this section in your webhook.js:
+    // FROM this (around line 140):
+    /*
+    const noteData = {
+      content: noteContent,
+      timestamp: Date.now(),
+      id: `email_${Date.now()}`,
+      fridgeId,
+      fridgeName,
+      source: 'email',
+      sender: from,
+      subject
+    };
+    
+    // Save to Vercel Blob
+    const blobKey = `fridge-${fridgeId}.json`;
+    await put(blobKey, JSON.stringify(noteData), {
+      access: 'public',
+      contentType: 'application/json'
+    });
+    */
+    
+    // TO this:
+    const noteData = {
+      content: noteContent,
+      timestamp: Date.now(),
+      id: `email_${Date.now()}`,
+      fridgeId,
+      fridgeName,
+      source: 'email',
+      sender: from,
+      subject
+    };
+    
+    // Fetch existing notes and append new one
+    const existingData = await fetchExistingNotes(fridgeId);
+    const allNotes = [noteData, ...existingData.notes].slice(0, 50); // Keep newest 50 notes
+    
+    // Save updated notes array
+    const blobKey = `fridge-${fridgeId}.json`;
+    await put(blobKey, JSON.stringify({ 
+      notes: allNotes,
+      lastUpdated: Date.now(),
+      fridgeId: fridgeId,
+      fridgeName: fridgeName
+    }), {
+      access: 'public',
+      contentType: 'application/json'
+    });
     
     const noteData = {
       content: noteContent,
