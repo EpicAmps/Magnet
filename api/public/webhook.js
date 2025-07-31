@@ -159,40 +159,6 @@ export default async function handler(req, res) {
       return { notes: [] }; // Return empty if none found
     }
     
-    // Then replace this section in your webhook.js:
-    // FROM this (around line 140):
-    /*
-    const noteData = {
-      content: noteContent,
-      timestamp: Date.now(),
-      id: `email_${Date.now()}`,
-      fridgeId,
-      fridgeName,
-      source: 'email',
-      sender: from,
-      subject
-    };
-    
-    // Save to Vercel Blob
-    const blobKey = `fridge-${fridgeId}.json`;
-    await put(blobKey, JSON.stringify(noteData), {
-      access: 'public',
-      contentType: 'application/json'
-    });
-    */
-    
-    // TO this:
-    const noteData = {
-      content: noteContent,
-      timestamp: Date.now(),
-      id: `email_${Date.now()}`,
-      fridgeId,
-      fridgeName,
-      source: 'email',
-      sender: from,
-      subject
-    };
-    
     // Fetch existing notes and append new one
     const existingData = await fetchExistingNotes(fridgeId);
     const allNotes = [noteData, ...existingData.notes].slice(0, 50); // Keep newest 50 notes
