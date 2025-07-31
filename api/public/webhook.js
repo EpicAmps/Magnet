@@ -9,6 +9,44 @@ marked.setOptions({
   sanitize: false,    // Allow HTML (we trust our own emails)
 });
 
+// Move fetchExistingNotes outside the handler - FIXED
+async function fetchExistingNotes(fridgeId) {
+  try {
+    // Use the same blob listing approach as your GET method - FIXED
+    const blobPrefix = `fridge-${fridgeId}`;
+    const { blobs } = await list({ prefix: blobPrefix });
+    
+    if (blobs.length === 0) {
+      console.log('No existing blobs found for:', fridgeId);
+      return { notes: [] };
+    }
+    
+    // Get the most recent blob
+    const mostRecentBlob = blobs.sort((a, b) => 
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    )[0];
+    
+    console.log('Found existing blob:', mostRecentBlob.pathname);
+    
+    // Fetch the blob content
+    const response = await fetch(mostRecentBlob.url);
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Handle both old format (single note) and new format (multiple notes)
+      if (data.notes && Array.isArray(data.notes)) {
+        return data; // New format
+      } else if (data.content) {
+        return { notes: [data] }; // Convert old format to new
+      }
+    }
+  } catch (error) {
+    console.log('Error fetching existing notes:', error.message);
+  }
+  
+  return { notes: [] }; // Return empty if none found
+}
+
 export default async function handler(req, res) {
   // Allow CORS for external webhooks
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -135,46 +173,7 @@ export default async function handler(req, res) {
       noteContent = formatEmailAsNote(subject, text, from);
     }
 
-    // Add this function to your webhook.js (around line 130, before the noteData creation)
-
-    async function fetchExistingNotes(fridgeId) {
-      try {
-        const blobKey = `fridge-${fridgeId}.json`;
-        const response = await fetch(`https://blob.vercel-storage.com/${blobKey}`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Handle both old format (single note) and new format (multiple notes)
-          if (data.notes && Array.isArray(data.notes)) {
-            return data; // New format
-          } else if (data.content) {
-            return { notes: [data] }; // Convert old format to new
-          }
-        }
-      } catch (error) {
-        console.log('No existing notes found or error fetching:', error.message);
-      }
-      
-      return { notes: [] }; // Return empty if none found
-    }
-    
-    // Fetch existing notes and append new one
-    const existingData = await fetchExistingNotes(fridgeId);
-    const allNotes = [noteData, ...existingData.notes].slice(0, 50); // Keep newest 50 notes
-    
-    // Save updated notes array
-    const blobKey = `fridge-${fridgeId}.json`;
-    await put(blobKey, JSON.stringify({ 
-      notes: allNotes,
-      lastUpdated: Date.now(),
-      fridgeId: fridgeId,
-      fridgeName: fridgeName
-    }), {
-      access: 'public',
-      contentType: 'application/json'
-    });
-    
+    // Create note data FIRST - FIXED
     const noteData = {
       content: noteContent,
       timestamp: Date.now(),
@@ -186,25 +185,45 @@ export default async function handler(req, res) {
       subject
     };
 
-    // Save to Vercel Blob (exact same format as original)
+    console.log('=== WEBHOOK DEBUG ===');
+    console.log('Processing email for fridgeId:', fridgeId);
+    
+    // Fetch existing notes and append new one - FIXED ORDER
+    const existingData = await fetchExistingNotes(fridgeId);
+    console.log('Existing notes found:', existingData.notes?.length || 0);
+    
+    const allNotes = [noteData, ...existingData.notes].slice(0, 10); // Keep newest 10 notes
+    console.log('Total notes after adding email:', allNotes.length);
+    
+    // Save updated notes array - SINGLE SAVE OPERATION
     const blobKey = `fridge-${fridgeId}.json`;
-    await put(blobKey, JSON.stringify(noteData), {
+    await put(blobKey, JSON.stringify({ 
+      notes: allNotes,
+      lastUpdated: Date.now(),
+      fridgeId: fridgeId,
+      fridgeName: fridgeName
+    }), {
       access: 'public',
       contentType: 'application/json'
     });
     
     // Debug: Log what we saved
     console.log('Saved to blob key:', blobKey);
-    console.log('Saved note data:', JSON.stringify(noteData, null, 2));
+    console.log('Total notes saved:', allNotes.length);
     
     // Notify connected fridges (ES6 import)
-    const { notifyFridges } = await import('./ping.js');
-    notifyFridges('note_updated', { 
-      message: `New email from ${from}`,
-      noteId: noteData.id,
-      fridgeId: fridgeId,
-      fridgeName: fridgeName
-    });
+    try {
+      const { notifyFridges } = await import('./ping.js');
+      notifyFridges('note_updated', { 
+        message: `New email from ${from}`,
+        noteId: noteData.id,
+        fridgeId: fridgeId,
+        fridgeName: fridgeName
+      });
+    } catch (pingError) {
+      console.log('Ping notification failed:', pingError.message);
+      // Don't fail the webhook if ping fails
+    }
     
     console.log(`Email processed for fridge: ${fridgeName} (${fridgeId})`);
     
@@ -213,7 +232,8 @@ export default async function handler(req, res) {
       message: 'Email processed successfully',
       fridgeName,
       fridgeId,
-      timestamp: noteData.timestamp 
+      timestamp: noteData.timestamp,
+      totalNotes: allNotes.length
     });
     
   } catch (error) {
