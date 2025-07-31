@@ -21,6 +21,8 @@ var urlParams = new URLSearchParams(window.location.search);
 fridgeId = urlParams.get('id') || getFromPath() || localStorage.getItem('fridgeId');
 fridgeName = localStorage.getItem('fridgeName');
 
+console.log('tada.js loaded successfully');
+
 function getFromPath() {
     var pathParts = window.location.pathname.split('/');
     if (pathParts.length >= 3 && pathParts[1] === 'fridge') {
