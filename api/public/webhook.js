@@ -1,4 +1,4 @@
-import { put, head } from '@vercel/blob';
+const { put, head } = require('@vercel/blob');
 import { parse } from 'querystring';
 import { marked } from 'marked';
 
