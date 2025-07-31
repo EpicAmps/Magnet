@@ -1,5 +1,27 @@
 import { put, head, get, list, del } from '@vercel/blob';
 
+async function fetchExistingNotes(fridgeId) {
+  try {
+    const blobKey = `fridge-${fridgeId}.json`;
+    const response = await fetch(`https://blob.vercel-storage.com/${blobKey}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Handle both old format (single note) and new format (multiple notes)
+      if (data.notes && Array.isArray(data.notes)) {
+        return data; // New format
+      } else if (data.content) {
+        return { notes: [data] }; // Convert old format to new
+      }
+    }
+  } catch (error) {
+    console.log('No existing notes found or error fetching:', error.message);
+  }
+  
+  return { notes: [] }; // Return empty if none found
+}
+
 export default async function handler(req, res) {
   // Enable CORS for fridge access
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,8 +53,18 @@ export default async function handler(req, res) {
       };
       
       // Save to Vercel Blob with fridge-specific filename
+      // Fetch existing notes and append new one
+      const existingData = await fetchExistingNotes(fridgeId);
+      const allNotes = [noteData, ...existingData.notes].slice(0, 10); // Keep newest 10 notes
+      
+      // Save updated notes array
       const blobKey = `fridge-${fridgeId}.json`;
-      await put(blobKey, JSON.stringify(noteData), {
+      await put(blobKey, JSON.stringify({ 
+        notes: allNotes,
+        lastUpdated: Date.now(),
+        fridgeId: fridgeId,
+        fridgeName: fridgeId
+      }), {
         access: 'public',
         contentType: 'application/json'
       });
@@ -45,11 +77,14 @@ export default async function handler(req, res) {
       //   fridgeId: fridgeId
       // });
       
+      console.log(`Note added to fridge: ${fridgeId}. Total notes: ${allNotes.length}`);
+      
       return res.json({ 
         success: true, 
         message: 'Note saved to magnet-blob successfully',
         timestamp: noteData.timestamp,
-        fridgeId: fridgeId
+        fridgeId: fridgeId,
+        totalNotes: allNotes.length
       });
       
     } else if (req.method === 'DELETE') {
