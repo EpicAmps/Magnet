@@ -316,7 +316,115 @@
             display: none !important;
         }
         
-        /* Pagination controls styling */
+        /* Multiple notes styling */
+        .note-item {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .note-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .note-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .note-sender {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+        
+        .note-time {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .note-item-content {
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+        
+        /* Apply all your existing note content styles to note items */
+        .note-item-content h1 {
+            color: #2c3e50 !important;
+            font-size: 1.6rem !important;
+            margin: 12px 0 12px 0 !important; 
+            padding: 0 !important;
+            border-bottom: 2px solid #3498db !important;
+            padding-bottom: 4px !important;
+            display: block !important;
+            line-height: 1.1 !important;
+        }
+        
+        .note-item-content h2 {
+            color: #2c3e50 !important;
+            font-size: 1.3rem !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-bottom: 1px solid #95a5a6 !important;
+            padding-bottom: 1px !important;
+            display: block !important;
+            line-height: 1.1 !important;
+        }
+        
+        .note-item-content h3 {
+            color: #2c3e50 !important;
+            font-size: 1.1rem !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            line-height: 1.1 !important;
+        }
+        
+        .note-item-content ul, .note-item-content ol {
+            margin: 0 !important;
+            padding: 0 !important;
+            padding-left: 10px !important;
+            display: block !important;
+        }
+        
+        .note-item-content li {
+            margin: 0 !important;
+            padding: 2px 4px !important;
+            font-size: 1.1rem !important;
+            line-height: 1.6 !important;
+            align-items: flex-start !important;
+            gap: 8px !important;
+            border-radius: 6px !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s ease !important;
+            position: relative !important;
+        }
+        
+        .note-item-content input[type="checkbox"] {
+            transform: scale(1.5) !important;
+            margin: 0 8px 4px 0 !important;
+            cursor: pointer !important;
+            vertical-align: middle !important;
+            pointer-events: auto !important;
+            flex-shrink: 0 !important;
+        }
+        
+        .note-item-content ul {
+            list-style: none !important;
+            padding-left: 10px !important;
+            margin: 0 !important;
+        }
+        
+        /* Pagination controls styling - keeping your existing styles */
         .pagination {
             display: flex;
             justify-content: center;
@@ -354,7 +462,7 @@
         }
         
         /* Horizontal rules */
-        .note-content hr {
+        .note-content hr, .note-item-content hr {
             border: none;
             border-top: 2px solid #bdc3c7;
             margin: 25px 0;
@@ -446,6 +554,16 @@
             opacity: 0.7;
             font-style: italic;
         }
+        
+        .no-notes {
+            text-align: center;
+            opacity: 0.7;
+            font-style: italic;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border-radius: 15px;
+        }
     </style>
 </head>
 <body>
@@ -478,7 +596,7 @@
                 <h3>🧲 Magnet Fridge Info</h3>
                 <p><strong>📧 Email:</strong> <span id="fridgeEmailInfo">Loading...</span></p>
                 <p><strong>🆔 Fridge ID:</strong> <span id="fridgeIdInfo">Loading...</span></p>
-                <p><strong>📱 How to use:</strong> Share any note from your iPhone using "Shortcuts" → "Coolio Quickie"</p>
+                <p><strong>📱 How to use:</strong> Share any note from your iPhone using "Shortcuts" → "Send to Coolio"</p>
                 <p><strong>🔄 Auto-refresh:</strong> <span id="refreshStatus">Checking every 2 minutes</span></p>
                 <button class="close-btn" onclick="toggleInfo()">Close</button>
             </div>
@@ -489,18 +607,20 @@
             <span id="countdown" style="opacity: 0.7; font-size: 0.9em;"></span>
         </div>
         
-        <div class="note-content" id="noteContent">
-            <div class="empty-state">
-                📱 Waiting for your first note...<br><br>
-                Send an email to the address above to see it here!
+        <div id="notesContainer">
+            <div class="note-content">
+                <div class="empty-state">
+                    📱 Waiting for your first note...<br><br>
+                    Send an email to the address above to see it here!
+                </div>
             </div>
         </div>
         
         <!-- Pagination controls -->
         <div class="pagination" id="pagination" style="display: none;">
-            <button id="prevBtn" onclick="previousNote()">‹ Prev</button>
+            <button id="prevBtn" onclick="changePage(-1)">‹ Prev</button>
             <div class="page-info" id="pageInfo">1 of 1</div>
-            <button id="nextBtn" onclick="nextNote()">Next ›</button>
+            <button id="nextBtn" onclick="changePage(1)">Next ›</button>
         </div>
         
         <div class="controls">
@@ -518,6 +638,145 @@
         <div class="timestamp" id="timestamp"></div>
     </div>
 
+    <script>
+        // Add these variables for multiple notes support
+        let allNotes = [];
+        let currentPage = 0;
+        const notesPerPage = 5;
+        
+        // Replace your existing displayNote function with this
+        function displayNotes(notesData) {
+            const notesContainer = document.getElementById('notesContainer');
+            const paginationDiv = document.getElementById('pagination');
+            
+            // Handle both old format (single note) and new format (multiple notes)
+            if (notesData.notes && Array.isArray(notesData.notes)) {
+                allNotes = notesData.notes;
+            } else if (notesData.content) {
+                allNotes = [notesData]; // Convert old format
+            } else {
+                allNotes = [];
+            }
+            
+            if (allNotes.length === 0) {
+                notesContainer.innerHTML = `
+                    <div class="note-content">
+                        <div class="no-notes">
+                            📱 No notes yet. Send your first note from iPhone!
+                        </div>
+                    </div>
+                `;
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            renderCurrentPage();
+            updatePagination();
+        }
+        
+        function renderCurrentPage() {
+            const notesContainer = document.getElementById('notesContainer');
+            const startIndex = currentPage * notesPerPage;
+            const endIndex = startIndex + notesPerPage;
+            const currentNotes = allNotes.slice(startIndex, endIndex);
+            
+            if (currentNotes.length === 1) {
+                // Single note - use full-width display
+                const note = currentNotes[0];
+                notesContainer.innerHTML = `
+                    <div class="note-content">
+                        ${formatNoteContent(note.content)}
+                    </div>
+                `;
+            } else {
+                // Multiple notes - use card layout
+                notesContainer.innerHTML = currentNotes.map(note => `
+                    <div class="note-item">
+                        <div class="note-meta">
+                            <span class="note-sender">${note.sender || note.source || 'Unknown'}</span>
+                            <span class="note-time">${formatTime(note.timestamp)}</span>
+                        </div>
+                        <div class="note-item-content">${formatNoteContent(note.content)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function updatePagination() {
+            const paginationDiv = document.getElementById('pagination');
+            const pageInfo = document.getElementById('pageInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            const totalPages = Math.ceil(allNotes.length / notesPerPage);
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            pageInfo.textContent = `${currentPage + 1} of ${totalPages}`;
+            
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage >= totalPages - 1;
+        }
+        
+        function changePage(direction) {
+            const totalPages = Math.ceil(allNotes.length / notesPerPage);
+            const newPage = currentPage + direction;
+            
+            if (newPage >= 0 && newPage < totalPages) {
+                currentPage = newPage;
+                renderCurrentPage();
+                updatePagination();
+            }
+        }
+        
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString();
+        }
+        
+        function formatNoteContent(content) {
+            if (!content) return 'Empty note';
+            
+            // Handle HTML content (from markdown)
+            if (content.includes('<') && content.includes('>')) {
+                return content;
+            }
+            
+            // Handle plain text - convert line breaks to HTML
+            return content.replace(/\n/g, '<br>');
+        }
+        
+        // Keep your existing functions but update the one that calls displayNote
+        // Make sure to change any calls to displayNote(data) to displayNotes(data)
+        
+        // Backward compatibility - if you have existing pagination functions
+        function previousNote() {
+            changePage(-1);
+        }
+        
+        function nextNote() {
+            changePage(1);
+        }
+        
+        // You'll need to update your checkForNewNotes or fetchNote function
+        // to call displayNotes(data) instead of displayNote(data)
+    </script>
+    
     <script type="text/javascript" src="tada.js"></script>
 </body>
 </html>
