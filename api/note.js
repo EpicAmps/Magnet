@@ -38,12 +38,12 @@ export default async function handler(req, res) {
       });
       
       // Ping connected fridges with this specific ID
-      const { notifyFridges } = await import('./ping.js');
-      notifyFridges('note_updated', { 
-        message: 'New note available',
-        noteId: noteData.id,
-        fridgeId: fridgeId
-      });
+      // const { notifyFridges } = await import('./ping.js');
+      // notifyFridges('note_updated', { 
+      //   message: 'New note available',
+      //   noteId: noteData.id,
+      //   fridgeId: fridgeId
+      // });
       
       return res.json({ 
         success: true, 
