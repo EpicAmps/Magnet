@@ -29,8 +29,8 @@
           'opsz' 24
         }
 
-        .button-icon {
-            color: #f3f3f3;
+        .material-icons.md-light {
+            color: rgba(255, 255, 255, 1); /* Light icon on dark background */
         }
 
         
@@ -605,7 +605,7 @@
                 <h1>Magnet Notes</h1>
             </div>
             <button class="info-button" onclick="toggleInfo()">
-                <span class="material-symbols-outlined button-icon">
+                <span class="material-symbols-outlined material-icons.md-light">
                     info
                 </span>
             </button>
@@ -644,17 +644,17 @@
         
         <div class="controls">
             <button class="refresh-btn" onclick="fetchNote()">
-                <span class="material-symbols-outlined button-icon">
+                <span class="material-symbols-outlined material-icons.md-light">
                 refresh
                 </span> Refresh Note
             </button>
             <button class="delete-btn" onclick="deleteNote()">
-                <span class="material-symbols-outlined button-icon">
+                <span class="material-symbols-outlined material-icons.md-light">
                 delete
                 </span> Delete Note
             </button>
             <button class="setup-btn" onclick="goToSetup()">
-                <span class="material-symbols-outlined button-icon">
+                <span class="material-symbols-outlined material-icons.md-light">
                 settings
                 </span> Change Fridge
             </button>
