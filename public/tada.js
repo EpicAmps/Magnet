@@ -11,9 +11,10 @@ var isSSEWorking = false;
 var pollingInterval = null;
 var lastManualCheck = 0;
 
-// Multi-note support
+// Multi-note support - NEW APPROACH
 var allNotes = [];
-var currentNoteIndex = 0;
+var currentPage = 0;
+var notesPerPage = 5;
 
 // Get fridge ID from URL parameter or localStorage
 var urlParams = new URLSearchParams(window.location.search);
@@ -139,15 +140,9 @@ function fetchNoteViaPolling() {
             return response.json();
         })
         .then(function(data) {
-            if (data.timestamp > lastUpdate) {
-                console.log('Found new note via polling!');
-                document.getElementById('statusText').textContent = '📧 New note found!';
-                updateNoteDisplay(data);
-            } else {
-                updateConnectionStatus(true);
-                document.getElementById('statusText').textContent = '✅ Up to date';
-            }
-            
+            displayNotes(data); // Use new displayNotes function
+            updateConnectionStatus(true);
+            document.getElementById('statusText').textContent = '✅ Up to date';
             startCountdown();
             lastManualCheck = Date.now();
         })
@@ -163,161 +158,194 @@ function fetchNote() {
             return response.json();
         })
         .then(function(data) {
-            // Handle multiple notes or single note response
-            if (Array.isArray(data)) {
-                allNotes = data.sort(function(a, b) { return b.timestamp - a.timestamp; });
-                currentNoteIndex = 0;
-                updateNoteDisplay(allNotes[currentNoteIndex]);
-                updatePagination();
-            } else {
-                allNotes = data.content ? [data] : [];
-                currentNoteIndex = 0;
-                updateNoteDisplay(data);
-                updatePagination();
-            }
-            
+            displayNotes(data); // Use new displayNotes function
             updateConnectionStatus(true);
             lastManualCheck = Date.now();
         })
         .catch(function(error) {
             console.error('Error fetching note:', error);
-            document.getElementById('noteContent').innerHTML = 
-                '<div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing</div>';
+            var notesContainer = document.getElementById('notesContainer');
+            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing</div></div>';
             document.getElementById('statusText').textContent = '❌ Connection error';
             updateConnectionStatus(false);
         });
 }
 
-function updateNoteDisplay(data) {
-    if (!data || (!data.content && !data.timestamp)) {
-        document.getElementById('noteContent').innerHTML = 
-            '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
+// NEW: Multiple notes display function
+function displayNotes(notesData) {
+    var notesContainer = document.getElementById('notesContainer');
+    var paginationDiv = document.getElementById('pagination');
+    
+    // Handle both old format (single note) and new format (multiple notes)
+    if (notesData.notes && Array.isArray(notesData.notes)) {
+        allNotes = notesData.notes;
+    } else if (notesData.content) {
+        allNotes = [notesData]; // Convert old format
+    } else {
+        allNotes = [];
+    }
+    
+    if (allNotes.length === 0) {
+        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
+        paginationDiv.style.display = 'none';
         document.getElementById('statusText').textContent = '⏳ No notes yet';
-        document.getElementById('pagination').style.display = 'none';
         return;
     }
     
-    if (data.timestamp > lastUpdate || true) {
-        var content = data.content || 'No content received';
-        
-        if (content.includes('No notes yet')) {
-            document.getElementById('noteContent').innerHTML = 
-                '<div class="empty-state">📱 Waiting for your first note...<br><br>Send a note using "Shortcuts" → "Coolio Quickie"!</div>';
-            document.getElementById('statusText').textContent = '⏳ No notes yet';
-        } else if (content.includes('Error loading')) {
-            document.getElementById('noteContent').innerHTML = 
-                '<div class="empty-state">❌ Error loading note<br><br>Try refreshing or send a new note</div>';
-            document.getElementById('statusText').textContent = '❌ Error loading note';
-        } else {
-            var displayContent = content;
-            
-            // Remove iOS Shortcut attribution if present
-            displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
-            displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
-            displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
-            displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
-            displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
-            
-            if (displayContent.includes('<') && displayContent.includes('>')) {
-                document.getElementById('noteContent').innerHTML = displayContent;
-            } else {
-                document.getElementById('noteContent').innerHTML = displayContent.replace(/\n/g, '<br>');
-            }
-            
-            var noteNumber = allNotes.length > 1 ? ' (' + (currentNoteIndex + 1) + '/' + allNotes.length + ')' : '';
-            document.getElementById('statusText').textContent = '📧 Note from ' + (data.sender || 'someone') + noteNumber;
+    renderCurrentPage();
+    updatePagination();
+    
+    // Update status
+    var totalNotes = allNotes.length;
+    var latestNote = allNotes[0];
+    document.getElementById('statusText').textContent = '📧 ' + totalNotes + ' note' + (totalNotes > 1 ? 's' : '') + 
+        ' from ' + (latestNote.sender || 'someone');
+    
+    // Update timestamp
+    document.getElementById('timestamp').textContent = 
+        'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
+    lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
+}
+
+function renderCurrentPage() {
+    var notesContainer = document.getElementById('notesContainer');
+    var startIndex = currentPage * notesPerPage;
+    var endIndex = startIndex + notesPerPage;
+    var currentNotes = allNotes.slice(startIndex, endIndex);
+    
+    if (currentNotes.length === 1 && allNotes.length === 1) {
+        // Single note - use full-width display
+        var note = currentNotes[0];
+        var content = formatNoteContent(note.content);
+        notesContainer.innerHTML = '<div class="note-content">' + content + '</div>';
+    } else {
+        // Multiple notes - use card layout
+        var html = '';
+        for (var i = 0; i < currentNotes.length; i++) {
+            var note = currentNotes[i];
+            html += '<div class="note-item">' +
+                '<div class="note-meta">' +
+                '<span class="note-sender">' + (note.sender || note.source || 'Unknown') + '</span>' +
+                '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
+                '</div>' +
+                '<div class="note-item-content">' + formatNoteContent(note.content) + '</div>' +
+                '</div>';
         }
-        
-        document.getElementById('timestamp').textContent = 
-            'Last updated: ' + new Date(data.timestamp).toLocaleString();
-        lastUpdate = Math.max(lastUpdate, data.timestamp);
+        notesContainer.innerHTML = html;
     }
 }
 
-// Pagination functions
 function updatePagination() {
-    var pagination = document.getElementById('pagination');
+    var paginationDiv = document.getElementById('pagination');
     var pageInfo = document.getElementById('pageInfo');
     var prevBtn = document.getElementById('prevBtn');
     var nextBtn = document.getElementById('nextBtn');
     
-    if (allNotes.length <= 1) {
-        pagination.style.display = 'none';
+    var totalPages = Math.ceil(allNotes.length / notesPerPage);
+    
+    if (totalPages <= 1) {
+        paginationDiv.style.display = 'none';
         return;
     }
     
-    pagination.style.display = 'flex';
-    pageInfo.textContent = (currentNoteIndex + 1) + ' of ' + allNotes.length;
+    paginationDiv.style.display = 'flex';
+    pageInfo.textContent = (currentPage + 1) + ' of ' + totalPages;
     
-    prevBtn.disabled = currentNoteIndex === 0;
-    nextBtn.disabled = currentNoteIndex === allNotes.length - 1;
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = currentPage >= totalPages - 1;
 }
 
-function previousNote() {
-    if (currentNoteIndex > 0) {
-        currentNoteIndex--;
-        updateNoteDisplay(allNotes[currentNoteIndex]);
+function changePage(direction) {
+    var totalPages = Math.ceil(allNotes.length / notesPerPage);
+    var newPage = currentPage + direction;
+    
+    if (newPage >= 0 && newPage < totalPages) {
+        currentPage = newPage;
+        renderCurrentPage();
         updatePagination();
     }
+}
+
+function formatTime(timestamp) {
+    var date = new Date(timestamp);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffMins = Math.floor(diffMs / 60000);
+    var diffHours = Math.floor(diffMs / 3600000);
+    var diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return diffMins + 'm ago';
+    if (diffHours < 24) return diffHours + 'h ago';
+    if (diffDays < 7) return diffDays + 'd ago';
+    
+    return date.toLocaleDateString();
+}
+
+function formatNoteContent(content) {
+    if (!content) return 'Empty note';
+    
+    var displayContent = content;
+    
+    // Remove iOS Shortcut attribution if present
+    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
+    displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
+    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
+    
+    // Handle HTML content (from markdown)
+    if (displayContent.includes('<') && displayContent.includes('>')) {
+        return displayContent;
+    }
+    
+    // Handle plain text - convert line breaks to HTML
+    return displayContent.replace(/\n/g, '<br>');
+}
+
+// Backward compatibility functions
+function previousNote() {
+    changePage(-1);
 }
 
 function nextNote() {
-    if (currentNoteIndex < allNotes.length - 1) {
-        currentNoteIndex++;
-        updateNoteDisplay(allNotes[currentNoteIndex]);
-        updatePagination();
-    }
+    changePage(1);
 }
 
 function deleteNote() {
-    if (!confirm('Are you sure you want to delete this note?')) {
+    if (!confirm('Are you sure you want to delete all notes?')) {
         return;
     }
     
     updateConnectionStatus(true);
-    document.getElementById('statusText').textContent = '🗑️ Deleting note...';
+    document.getElementById('statusText').textContent = '🗑️ Deleting notes...';
     
-    var currentNote = allNotes[currentNoteIndex];
     fetch(API_BASE + '/api/note', {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            fridgeId: fridgeId,
-            noteId: currentNote.id || currentNote.timestamp
+            fridgeId: fridgeId
         })
     })
     .then(function(response) {
         if (response.ok) {
-            allNotes.splice(currentNoteIndex, 1);
-            
-            if (currentNoteIndex >= allNotes.length && allNotes.length > 0) {
-                currentNoteIndex = allNotes.length - 1;
-            }
-            
-            if (allNotes.length > 0) {
-                updateNoteDisplay(allNotes[currentNoteIndex]);
-                updatePagination();
-                document.getElementById('statusText').textContent = '✅ Note deleted successfully!';
-            } else {
-                document.getElementById('noteContent').innerHTML = 
-                    '<div class="empty-state">📱 Note deleted!<br><br>Send a new email to see it here!</div>';
-                document.getElementById('pagination').style.display = 'none';
-                document.getElementById('statusText').textContent = '✅ All notes deleted!';
-                lastUpdate = 0;
-            }
-            
-            document.getElementById('timestamp').textContent = 
-                'Deleted: ' + new Date().toLocaleString();
-            
+            allNotes = [];
+            currentPage = 0;
+            var notesContainer = document.getElementById('notesContainer');
+            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 Notes deleted!<br><br>Send a new note to see it here!</div></div>';
+            document.getElementById('pagination').style.display = 'none';
+            document.getElementById('statusText').textContent = '✅ All notes deleted!';
+            document.getElementById('timestamp').textContent = 'Deleted: ' + new Date().toLocaleString();
+            lastUpdate = 0;
         } else {
-            throw new Error('Failed to delete note');
+            throw new Error('Failed to delete notes');
         }
     })
     .catch(function(error) {
-        console.error('Error deleting note:', error);
-        document.getElementById('statusText').textContent = '❌ Error deleting note. Try again.';
+        console.error('Error deleting notes:', error);
+        document.getElementById('statusText').textContent = '❌ Error deleting notes. Try again.';
     });
 }
 
@@ -325,9 +353,9 @@ function goToSetup() {
     window.location.href = '/setup.html';
 }
 
-// Simple task list interaction (no celebration)
+// Simple task list interaction
 function setupTaskListInteraction() {
-    document.getElementById('noteContent').addEventListener('click', function(event) {
+    document.getElementById('notesContainer').addEventListener('click', function(event) {
         var listItem = event.target.closest('li');
         
         if (listItem && listItem.querySelector('input[type="checkbox"]')) {
