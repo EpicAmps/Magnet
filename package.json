@@ -1,6 +1,7 @@
 {
   "name": "magnet-fridge-notes",
   "version": "1.0.0",
+  "type": "module"
   "description": "Fridge Notes + Alerts System - sync Apple Notes to Samsung Smart Fridge",
   "main": "index.js",
   "scripts": {
