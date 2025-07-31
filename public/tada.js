@@ -155,6 +155,7 @@ function fetchNoteViaPolling() {
 }
 
 function fetchNote() {
+    startCountdown(); 
     fetch(API_BASE + '/api/note?fridgeId=' + fridgeId)
         .then(function(response) {
             return response.json();
