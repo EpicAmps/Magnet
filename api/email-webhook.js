@@ -120,13 +120,13 @@ export default async function handler(req, res) {
     });
     
     // Notify connected fridges
-    const { notifyFridges } = await import('./ping.js');
-    notifyFridges('note_updated', { 
-      message: `New email from ${from}`,
-      noteId: noteData.id,
-      fridgeId: fridgeId,
-      fridgeName: fridgeName
-    });
+    // const { notifyFridges } = await import('./ping.js');
+    // notifyFridges('note_updated', { 
+    //   message: `New email from ${from}`,
+    //   noteId: noteData.id,
+    //   fridgeId: fridgeId,
+    //   fridgeName: fridgeName
+    // });
     
     console.log(`Email processed for fridge: ${fridgeName} (${fridgeId})`);
     
