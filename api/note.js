@@ -1,4 +1,4 @@
-import { put, head, get, list, del } from '@vercel/blob';
+import { put, head, list, del } from '@vercel/blob';
 
 async function fetchExistingNotes(fridgeId) {
   try {
