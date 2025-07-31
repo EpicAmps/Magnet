@@ -25,7 +25,7 @@ async function fetchExistingNotes(fridgeId) {
 export default async function handler(req, res) {
   // Enable CORS for fridge access
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   if (req.method === 'OPTIONS') {
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       // iOS Shortcut posting new note
-      const { content, fridgeId } = req.body;
+      const { content, fridgeId, sender } = req.body;
       
       if (!content) {
         return res.status(400).json({ error: 'Content is required' });
@@ -49,10 +49,13 @@ export default async function handler(req, res) {
         content,
         timestamp: Date.now(),
         id: `note_${Date.now()}`,
-        fridgeId
+        fridgeId,
+        fridgeName: fridgeId, // You might want to improve this
+        source: 'shortcut',
+        sender: sender || 'iPhone',
+        subject: 'Note from iPhone'
       };
       
-      // Save to Vercel Blob with fridge-specific filename
       // Fetch existing notes and append new one
       const existingData = await fetchExistingNotes(fridgeId);
       const allNotes = [noteData, ...existingData.notes].slice(0, 10); // Keep newest 10 notes
@@ -69,14 +72,6 @@ export default async function handler(req, res) {
         contentType: 'application/json'
       });
       
-      // Ping connected fridges with this specific ID
-      // const { notifyFridges } = await import('./ping.js');
-      // notifyFridges('note_updated', { 
-      //   message: 'New note available',
-      //   noteId: noteData.id,
-      //   fridgeId: fridgeId
-      // });
-      
       console.log(`Note added to fridge: ${fridgeId}. Total notes: ${allNotes.length}`);
       
       return res.json({ 
@@ -88,7 +83,7 @@ export default async function handler(req, res) {
       });
       
     } else if (req.method === 'DELETE') {
-      // Delete note for fridge
+      // Delete all notes for fridge
       const { fridgeId } = req.body;
       
       if (!fridgeId) {
@@ -96,7 +91,7 @@ export default async function handler(req, res) {
       }
       
       try {
-        // Find and delete the most recent blob for this fridge
+        // Find and delete the blob for this fridge
         const blobPrefix = `fridge-${fridgeId}`;
         console.log('Deleting blobs with prefix:', blobPrefix);
         
@@ -116,29 +111,22 @@ export default async function handler(req, res) {
           console.log('Deleted blob:', blob.pathname);
         }
         
-        // Notify connected fridges
-        // const { notifyFridges } = await import('./ping.js');
-        // notifyFridges('note_deleted', { 
-        //   message: 'Note deleted',
-        //   fridgeId: fridgeId
-        // });
-        
         return res.json({ 
           success: true, 
-          message: 'Note deleted successfully',
+          message: 'All notes deleted successfully',
           fridgeId: fridgeId
         });
         
       } catch (error) {
-        console.error('Error deleting note:', error);
+        console.error('Error deleting notes:', error);
         return res.status(500).json({ 
-          error: 'Failed to delete note',
+          error: 'Failed to delete notes',
           details: error.message 
         });
       }
       
     } else if (req.method === 'GET') {
-      // Fridge fetching latest note
+      // Fridge fetching notes - NEW: Return multiple notes format
       const fridgeId = req.query.fridgeId;
       
       if (!fridgeId) {
@@ -146,21 +134,47 @@ export default async function handler(req, res) {
       }
       
       try {
-        // Find the blob by prefix since Vercel adds random suffixes
+        // Try direct blob access first (faster)
+        const blobKey = `fridge-${fridgeId}.json`;
+        
+        try {
+          const response = await fetch(`https://blob.vercel-storage.com/${blobKey}`);
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Successfully retrieved notes via direct access');
+            
+            // Return in new multiple notes format
+            if (data.notes && Array.isArray(data.notes)) {
+              return res.json(data); // New format - return as-is
+            } else if (data.content) {
+              // Old format - convert to new format
+              return res.json({
+                notes: [data],
+                lastUpdated: data.timestamp,
+                fridgeId: fridgeId,
+                fridgeName: fridgeId
+              });
+            }
+          }
+        } catch (directError) {
+          console.log('Direct access failed, trying blob listing:', directError.message);
+        }
+        
+        // Fallback: Find the blob by prefix (slower but more reliable)
         const blobPrefix = `fridge-${fridgeId}`;
         console.log('Searching for blobs with prefix:', blobPrefix);
         
-        // List all blobs that start with our prefix
         const { blobs } = await list({ prefix: blobPrefix });
         console.log('Found blobs:', blobs.map(b => b.pathname));
         
         if (blobs.length === 0) {
           console.log('No blobs found with prefix:', blobPrefix);
           return res.json({ 
-            content: `No notes yet for fridge ${fridgeId}! Send one from your iPhone.`,
-            timestamp: Date.now(),
-            id: 'default',
-            fridgeId: fridgeId
+            notes: [],
+            lastUpdated: Date.now(),
+            fridgeId: fridgeId,
+            fridgeName: fridgeId
           });
         }
         
@@ -177,18 +191,38 @@ export default async function handler(req, res) {
           throw new Error(`Failed to fetch blob: ${response.status}`);
         }
         
-        const note = await response.json();
-        console.log('Successfully retrieved note:', note);
-        return res.json(note);
+        const data = await response.json();
+        console.log('Successfully retrieved notes via blob listing');
+        
+        // Return in new multiple notes format
+        if (data.notes && Array.isArray(data.notes)) {
+          return res.json(data); // New format - return as-is
+        } else if (data.content) {
+          // Old format - convert to new format
+          return res.json({
+            notes: [data],
+            lastUpdated: data.timestamp,
+            fridgeId: fridgeId,
+            fridgeName: fridgeId
+          });
+        }
+        
+        // Empty case
+        return res.json({ 
+          notes: [],
+          lastUpdated: Date.now(),
+          fridgeId: fridgeId,
+          fridgeName: fridgeId
+        });
         
       } catch (error) {
-        console.error('Error fetching from blob:', error);
-        // Return default if blob fetch fails
+        console.error('Error fetching notes:', error);
+        // Return empty notes array on error instead of error message
         return res.json({ 
-          content: `Error loading notes for fridge ${fridgeId}. Please try again.`,
-          timestamp: Date.now(),
-          id: 'error',
+          notes: [],
+          lastUpdated: Date.now(),
           fridgeId: fridgeId,
+          fridgeName: fridgeId,
           error: error.message
         });
       }
