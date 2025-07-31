@@ -18,6 +18,16 @@
             padding: 20px;
             color: white;
         }
+
+      
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+
         
         .container {
             max-width: 800px;
@@ -589,7 +599,11 @@
                 </svg>
                 <h1>Magnet Notes</h1>
             </div>
-            <button class="info-button" onclick="toggleInfo()">ℹ️</button>
+            <button class="info-button" onclick="toggleInfo()">
+                <span class="material-symbols-outlined">
+                    info
+                </span>
+            </button>
             
             <!-- Info popup - now properly styled and hidden by default -->
             <div class="info-popup" id="infoPopup">
