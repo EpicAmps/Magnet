@@ -2,9 +2,24 @@ import { put, head, list, del } from '@vercel/blob';
 
 async function fetchExistingNotes(fridgeId) {
   try {
-    const blobKey = `fridge-${fridgeId}.json`;
-    const response = await fetch(`https://blob.vercel-storage.com/${blobKey}`);
+    // Use the same blob listing approach as your GET method
+    const blobPrefix = `fridge-${fridgeId}`;
+    const { blobs } = await list({ prefix: blobPrefix });
     
+    if (blobs.length === 0) {
+      console.log('No existing blobs found for:', fridgeId);
+      return { notes: [] };
+    }
+    
+    // Get the most recent blob
+    const mostRecentBlob = blobs.sort((a, b) => 
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    )[0];
+    
+    console.log('Found existing blob:', mostRecentBlob.pathname);
+    
+    // Fetch the blob content
+    const response = await fetch(mostRecentBlob.url);
     if (response.ok) {
       const data = await response.json();
       
@@ -16,7 +31,7 @@ async function fetchExistingNotes(fridgeId) {
       }
     }
   } catch (error) {
-    console.log('No existing notes found or error fetching:', error.message);
+    console.log('Error fetching existing notes:', error.message);
   }
   
   return { notes: [] }; // Return empty if none found
