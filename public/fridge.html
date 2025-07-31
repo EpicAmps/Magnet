@@ -29,6 +29,10 @@
           'opsz' 24
         }
 
+        .button-icon {
+            color: #f3f3f3;
+        }
+
         
         .container {
             max-width: 800px;
@@ -601,7 +605,7 @@
                 <h1>Magnet Notes</h1>
             </div>
             <button class="info-button" onclick="toggleInfo()">
-                <span class="material-symbols-outlined">
+                <span class="material-symbols-outlined, button-icon">
                     info
                 </span>
             </button>
@@ -640,13 +644,19 @@
         
         <div class="controls">
             <button class="refresh-btn" onclick="fetchNote()">
-                🔄 Refresh Note
+                <span class="material-symbols-outlined, button-icon">
+                refresh
+                </span> Refresh Note
             </button>
             <button class="delete-btn" onclick="deleteNote()">
-                🗑️ Delete Note
+                <span class="material-symbols-outlined, button-icon">
+                delete
+                </span> Delete Note
             </button>
             <button class="setup-btn" onclick="goToSetup()">
-                ⚙️ Change Fridge
+                <span class="material-symbols-outlined, button-icon">
+                settings
+                </span> Change Fridge
             </button>
         </div>
         
