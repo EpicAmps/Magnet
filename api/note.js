@@ -36,6 +36,8 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       // iOS Shortcut posting new note
       const { content, fridgeId, sender } = req.body;
+      console.log('=== POST REQUEST DEBUG ===');
+      console.log('Received fridgeId:', fridgeId);
       
       if (!content) {
         return res.status(400).json({ error: 'Content is required' });
@@ -57,8 +59,15 @@ export default async function handler(req, res) {
       };
       
       // Fetch existing notes and append new one
+     
+      
       const existingData = await fetchExistingNotes(fridgeId);
-      const allNotes = [noteData, ...existingData.notes].slice(0, 10); // Keep newest 10 notes
+      console.log('Existing notes found:', existingData.notes?.length || 0);
+      console.log('Existing notes:', existingData);
+
+      const allNotes = [noteData, ...existingData.notes].slice(0, 10);
+      console.log('Total notes after adding new one:', allNotes.length);
+      console.log('All notes:', allNotes.map(n => ({ id: n.id, timestamp: n.timestamp })));
       
       // Save updated notes array
       const blobKey = `fridge-${fridgeId}.json`;
