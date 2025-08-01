@@ -11,9 +11,6 @@ marked.setOptions({
   sanitize: false,    // Allow HTML (we trust our own emails)
 });
 
-// Enable checkboxes (remove disabled attribute)
-formattedContent = formattedContent.replace(/(<input[^>]+)disabled[^>]*>/gi, '$1>');
-
 // Move fetchExistingNotes outside the handler - FIXED
 async function fetchExistingNotes(fridgeId) {
   try {
@@ -319,6 +316,9 @@ function formatEmailAsNote(subject, text, from) {
       
       // Convert markdown to HTML
       formattedContent = marked(processedText);
+      
+      // MOVED FROM LINE 15: Enable checkboxes (remove disabled attribute)
+      formattedContent = formattedContent.replace(/(<input[^>]+)disabled[^>]*>/gi, '$1>');
       
       // Add sender attribution
       if (from && !processedText.includes(from)) {
