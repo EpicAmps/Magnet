@@ -306,37 +306,46 @@ function formatEmailAsNote(subject, text, from) {
   
   let formattedContent;
   
-  if (isMarkdown) {
-    // Process as markdown
-    try {
-      // Add subject as header if not already in content
-      if (subject && !processedText.toLowerCase().includes(subject.toLowerCase())) {
-        processedText = `# ${subject}\n\n${processedText}`;
-      }
-      
-      // Convert markdown to HTML
-      formattedContent = marked(processedText);
-      
-      // MOVED FROM LINE 15: Enable checkboxes (remove disabled attribute)
-      formattedContent = formattedContent.replace(/(<input[^>]+)disabled[^>]*>/gi, '$1>');
-      
-      // Add sender attribution
-      if (from && !processedText.includes(from)) {
-        formattedContent += `<p class="sender-attribution">— ${from}</p>`;
-      }
-      
-      console.log('Processed as markdown, converted Apple Notes format');
-      console.log('Final HTML length:', formattedContent.length);
-      
-    } catch (error) {
-      console.error('Markdown processing error:', error);
-      // Fallback to plain text processing
-      formattedContent = processAsPlainText(subject, cleanText, from);
+  / With this proper checkbox handling:
+if (isMarkdown) {
+  // Process as markdown
+  try {
+    // Add subject as header if not already in content
+    if (subject && !processedText.toLowerCase().includes(subject.toLowerCase())) {
+      processedText = `# ${subject}\n\n${processedText}`;
     }
-  } else {
-    // Process as plain text
+    
+    // Convert markdown to HTML
+    formattedContent = marked(processedText);
+    
+    // PROPER CHECKBOX FIXING: Handle both checked and unchecked checkboxes properly
+    // Fix checked checkboxes - remove disabled but keep checked
+    formattedContent = formattedContent.replace(/<input([^>]*?)type="checkbox"([^>]*?)checked([^>]*?)disabled([^>]*?)>/gi, '<input$1type="checkbox"$2checked$3>');
+    formattedContent = formattedContent.replace(/<input([^>]*?)disabled([^>]*?)type="checkbox"([^>]*?)checked([^>]*?)>/gi, '<input$1type="checkbox"$3checked$4>');
+    formattedContent = formattedContent.replace(/<input([^>]*?)checked([^>]*?)type="checkbox"([^>]*?)disabled([^>]*?)>/gi, '<input$1checked$2type="checkbox"$3>');
+    formattedContent = formattedContent.replace(/<input([^>]*?)checked([^>]*?)disabled([^>]*?)type="checkbox"([^>]*?)>/gi, '<input$1checked$2type="checkbox"$4>');
+    
+    // Fix unchecked checkboxes - remove disabled
+    formattedContent = formattedContent.replace(/<input([^>]*?)type="checkbox"([^>]*?)disabled([^>]*?)(?!.*checked)>/gi, '<input$1type="checkbox"$2>');
+    formattedContent = formattedContent.replace(/<input([^>]*?)disabled([^>]*?)type="checkbox"([^>]*?)(?!.*checked)>/gi, '<input$1type="checkbox"$3>');
+    
+    // Add sender attribution
+    if (from && !processedText.includes(from)) {
+      formattedContent += `<p class="sender-attribution">— ${from}</p>`;
+    }
+    
+    console.log('Processed as markdown, converted Apple Notes format');
+    console.log('Final HTML length:', formattedContent.length);
+    
+  } catch (error) {
+    console.error('Markdown processing error:', error);
+    // Fallback to plain text processing
     formattedContent = processAsPlainText(subject, cleanText, from);
   }
+} else {
+  // Process as plain text
+  formattedContent = processAsPlainText(subject, cleanText, from);
+}
   
   return formattedContent;
 }
