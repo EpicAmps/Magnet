@@ -319,7 +319,7 @@ function formatEmailAsNote(subject, text, from) {
   
   let formattedContent;
   
-  / With this proper checkbox handling:
+  // With this proper checkbox handling:
 if (isMarkdown) {
   // Process as markdown
   try {
