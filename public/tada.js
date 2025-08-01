@@ -11,10 +11,6 @@ var lastSSEMessage = Date.now();
 var isSSEWorking = false;// Track connected fridge clients by fridge ID
 
 
-export default function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
 
   // Get fridge ID from query parameter
   const fridgeId = req.query.fridgeId;
