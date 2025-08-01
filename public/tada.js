@@ -283,7 +283,7 @@ function formatNoteContentWithCheckboxes(content) {
     return displayContent;
 }
 
-// Enhanced renderCurrentPage with tab filtering
+// Enhanced renderCurrentPage with consistent layout across all tabs
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
     
@@ -300,57 +300,40 @@ function renderCurrentPage() {
         return;
     }
     
-    if (currentNotes.length === 1 && filteredNotes.length === 1) {
-        // Single note - use full-width display with delete button
-        var note = currentNotes[0];
-        var noteIndex = allNotes.indexOf(note); // Get original index
-        var content = formatNoteContentWithCheckboxes(note.content);
+    // ALWAYS use the card layout for consistency - even for single notes
+    var html = '';
+    for (var i = 0; i < currentNotes.length; i++) {
+        var note = currentNotes[i];
+        var noteIndex = allNotes.indexOf(note); // Get original index for delete function
         var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + noteIndex + ', \'' + 
             (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
         
-        var containerClass = 'note-content single-note-container';
+        var noteClass = 'note-item';
+        var completionBadge = '';
+        
         if (note.completed) {
-            containerClass += ' completed-note';
+            noteClass += ' completed-note';
+            completionBadge = '<span class="completion-badge">✓ Completed</span>';
         }
         
-        notesContainer.innerHTML = '<div class="' + containerClass + '">' + 
-            deleteBtn + content + '</div>';
-    } else {
-        // Multiple notes - use card layout with individual delete buttons
-        var html = '';
-        for (var i = 0; i < currentNotes.length; i++) {
-            var note = currentNotes[i];
-            var noteIndex = allNotes.indexOf(note); // Get original index
-            var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + noteIndex + ', \'' + 
-                (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
-            
-            var noteClass = 'note-item';
-            var completionBadge = '';
-            
-            if (note.completed) {
-                noteClass += ' completed-note';
-                completionBadge = '<span class="completion-badge">✓ Completed</span>';
-            }
-            
-            // Extract dynamic title from note content and get cleaned content
-            var titleData = extractAndCleanNoteTitle(note.content);
-            var noteTitle = titleData.title;
-            var cleanedContent = titleData.content;
-            
-            html += '<div class="' + noteClass + '">' +
-                '<div class="note-header">' +
-                '<h2 class="note-title">' + noteTitle + '</h2>' +
-                '<div class="note-meta-right">' +
-                completionBadge +
-                '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
-                deleteBtn +
-                '</div>' +
-                '</div>' +
-                '<div class="note-item-content">' + formatNoteContentWithCheckboxes(cleanedContent) + '</div>' +
-                '</div>';
-        }
-        notesContainer.innerHTML = html;
+        // Extract dynamic title from note content and get cleaned content
+        var titleData = extractAndCleanNoteTitle(note.content);
+        var noteTitle = titleData.title;
+        var cleanedContent = titleData.content;
+        
+        html += '<div class="' + noteClass + '">' +
+            '<div class="note-header">' +
+            '<h2 class="note-title">' + noteTitle + '</h2>' +
+            '<div class="note-meta-right">' +
+            completionBadge +
+            '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
+            deleteBtn +
+            '</div>' +
+            '</div>' +
+            '<div class="note-item-content">' + formatNoteContentWithCheckboxes(cleanedContent) + '</div>' +
+            '</div>';
     }
+    notesContainer.innerHTML = html;
 }
 
 // Extract title and return cleaned content without the title
