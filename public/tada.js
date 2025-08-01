@@ -925,11 +925,27 @@ if (document.readyState === 'loading') {
 function initializeApp() {
     if (fridgeId) {
         console.log('Starting notification system...');
-        connectToNotifications();
+        console.log('🚫 SSE disabled - using polling only');
+        
+        // DON'T connect to SSE since it's broken
+        // connectToNotifications(); // DISABLED
+        
         startPollingBackup();
         fetchNote();
         setupTaskListInteraction();
         startCountdown();
+        
+        // Add frequent polling since SSE is broken
+        console.log('🔄 Setting up 30-second polling...');
+        setInterval(function() {
+            console.log('🔄 Automatic polling check...');
+            fetchNote();
+        }, 30000); // Check every 30 seconds
+        
+        // Update status to show we're using polling
+        setTimeout(function() {
+            document.getElementById('statusText').textContent = '🔄 Using backup polling (SSE disabled)';
+        }, 2000);
     }
 }
 
@@ -1227,3 +1243,40 @@ function resurrectNote(noteIndex) {
         }, 3000);
     }, 100);
 }
+
+function testManualRefresh() {
+    console.log('=== MANUAL REFRESH TEST ===');
+    console.log('Forcing fresh API call...');
+    
+    // Add a timestamp to bypass any caching
+    const timestamp = Date.now();
+    const testUrl = API_BASE + '/api/note?fridgeId=' + fridgeId + '&t=' + timestamp;
+    
+    console.log('Test URL:', testUrl);
+    
+    fetch(testUrl)
+        .then(response => response.json())
+        .then(data => {
+            console.log('=== FRESH API RESPONSE ===');
+            console.log('Full response:', JSON.stringify(data, null, 2));
+            console.log('Number of notes:', data.notes?.length || 0);
+            
+            if (data.notes && data.notes.length > 0) {
+                console.log('=== ALL NOTES TIMESTAMPS ===');
+                data.notes.forEach((note, index) => {
+                    const noteDate = new Date(note.timestamp);
+                    console.log(`Note ${index}: ${note.id} - ${noteDate.toISOString()} (${noteDate.toLocaleString()})`);
+                });
+            }
+            
+            // Force display the data
+            displayNotes(data);
+        })
+        .catch(error => {
+            console.error('Manual refresh failed:', error);
+        });
+}
+
+// Make it available in console
+window.testManualRefresh = testManualRefresh;
+console.log('🔧 testManualRefresh() function available in console');
