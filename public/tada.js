@@ -30,6 +30,44 @@ fridgeId = urlParams.get('id') || getFromPath() || localStorage.getItem('fridgeI
 fridgeName = localStorage.getItem('fridgeName');
 
 console.log('tada.js loaded successfully');
+function testPingEndpoint() {
+    console.log('=== TESTING PING ENDPOINT ===');
+    
+    // Test with a simple fetch first (not SSE)
+    const testUrl = API_BASE + '/api/ping?fridgeId=' + fridgeId;
+    console.log('Testing URL:', testUrl);
+    
+    fetch(testUrl, {
+        method: 'GET',
+        headers: {
+            'Accept': 'text/event-stream',
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => {
+        console.log('Ping test response status:', response.status);
+        console.log('Ping test response headers:', response.headers);
+        console.log('Content-Type:', response.headers.get('content-type'));
+        
+        if (response.ok) {
+            console.log('✅ Ping endpoint is accessible via GET');
+            return response.text();
+        } else {
+            console.log('❌ Ping endpoint returned:', response.status, response.statusText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+    })
+    .then(text => {
+        console.log('Ping response body:', text.substring(0, 200));
+    })
+    .catch(error => {
+        console.error('❌ Ping endpoint test failed:', error);
+    });
+}
+
+// Make it available in console
+window.testPingEndpoint = testPingEndpoint;
+console.log('🔧 testPingEndpoint() function available in console');
 
 function getFromPath() {
     var pathParts = window.location.pathname.split('/');
