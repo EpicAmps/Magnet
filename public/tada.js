@@ -98,10 +98,14 @@ function connectToNotifications() {
         eventSource.close();
     }
     
+    console.log('=== SSE CONNECTION DEBUG ===');
+    console.log('Connecting to SSE for fridgeId:', fridgeId);
+    console.log('SSE URL:', API_BASE + '/api/ping?fridgeId=' + fridgeId);
+    
     eventSource = new EventSource(API_BASE + '/api/ping?fridgeId=' + fridgeId);
     
     eventSource.onopen = function() {
-        console.log('Connected to notification service for fridge:', fridgeId);
+        console.log('✅ SSE Connected successfully for fridge:', fridgeId);
         isSSEWorking = true;
         lastSSEMessage = Date.now();
         updateConnectionStatus(true);
@@ -109,22 +113,39 @@ function connectToNotifications() {
     };
     
     eventSource.onmessage = function(event) {
-        var data = JSON.parse(event.data);
-        console.log('Received SSE notification:', data);
+        console.log('=== SSE MESSAGE RECEIVED ===');
+        console.log('Raw event data:', event.data);
         
-        isSSEWorking = true;
-        lastSSEMessage = Date.now();
-        
-        if (data.type === 'note_updated') {
-            document.getElementById('statusText').textContent = '📧 New note received instantly!';
-            fetchNote();
-        } else if (data.type === 'connected') {
-            document.getElementById('statusText').textContent = '✅ Real-time updates active';
+        try {
+            var data = JSON.parse(event.data);
+            console.log('Parsed SSE data:', data);
+            console.log('Message type:', data.type);
+            console.log('Message details:', data);
+            
+            isSSEWorking = true;
+            lastSSEMessage = Date.now();
+            
+            if (data.type === 'note_updated') {
+                console.log('🔔 NOTE_UPDATED notification received!');
+                console.log('Triggering fetchNote()...');
+                document.getElementById('statusText').textContent = '📧 New note received instantly!';
+                fetchNote();
+            } else if (data.type === 'connected') {
+                console.log('🔗 SSE Connected notification');
+                document.getElementById('statusText').textContent = '✅ Real-time updates active';
+            } else {
+                console.log('❓ Unknown SSE message type:', data.type);
+            }
+        } catch (parseError) {
+            console.error('Failed to parse SSE message:', parseError);
+            console.log('Raw message was:', event.data);
         }
     };
     
     eventSource.onerror = function(error) {
-        console.error('SSE Error:', error);
+        console.error('❌ SSE Error:', error);
+        console.log('SSE readyState:', eventSource.readyState);
+        console.log('SSE url:', eventSource.url);
         isSSEWorking = false;
         updateConnectionStatus(false);
         document.getElementById('statusText').textContent = '🔄 Using backup checking';
