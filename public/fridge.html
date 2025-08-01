@@ -978,6 +978,24 @@
             <span id="statusText">Starting system...</span>
             <span id="countdown" style="opacity: 0.7; font-size: 0.9em;"></span>
         </div>
+
+        <!-- Add this right after the status div and before notesContainer -->
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab active" id="tab-all" data-tab="all" onclick="switchToTab('all')">
+                    All
+                </button>
+                <button class="tab" id="tab-dad" data-tab="dad" onclick="switchToTab('dad')">
+                    Dad
+                </button>
+                <button class="tab" id="tab-mom" data-tab="mom" onclick="switchToTab('mom')">
+                    Mom
+                </button>
+                <button class="tab" id="tab-jess" data-tab="jess" onclick="switchToTab('jess')">
+                    Jess
+                </button>
+            </div>
+        </div>
         
         <div id="notesContainer">
             <div class="note-content">
