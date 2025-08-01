@@ -255,7 +255,8 @@ function displayNotes(notesData) {
     lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
 }
 
-// Enhanced content formatter that properly handles checkboxes
+
+// Enhanced content formatter that properly handles checkboxes with preserved state
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -268,20 +269,21 @@ function formatNoteContentWithCheckboxes(content) {
     displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
     displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
     
-    // Handle HTML content (from markdown)
-    if (displayContent.includes('<') && displayContent.includes('>')) {
-        // If it's HTML, convert markdown checkboxes to actual HTML checkboxes
-        displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked>');
-        displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
+    // Handle HTML content (from markdown) - preserve existing checkboxes if they exist
+    if (displayContent.includes('<input type="checkbox"')) {
+        // Already has HTML checkboxes, just return as-is
         return displayContent;
     }
     
-    // Handle plain text - convert markdown checkboxes to HTML checkboxes
-    displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked>');
+    // Handle both HTML and plain text - convert markdown checkboxes to HTML checkboxes
+    // Make sure checked boxes stay checked and unchecked boxes stay unchecked
+    displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked="checked">');
     displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
     
-    // Convert line breaks to HTML
-    displayContent = displayContent.replace(/\n/g, '<br>');
+    // Convert line breaks to HTML if it's plain text
+    if (!displayContent.includes('<') || !displayContent.includes('>')) {
+        displayContent = displayContent.replace(/\n/g, '<br>');
+    }
     
     return displayContent;
 }
@@ -567,7 +569,7 @@ function findNoteIndexFromElement(noteElement) {
     return -1;
 }
 
-// Update checkbox state in the actual note data
+// Enhanced updateCheckboxInNoteData to be more robust
 function updateCheckboxInNoteData(checkbox) {
     // Find which note this checkbox belongs to
     var noteElement = checkbox.closest('.note-item, .note-content');
@@ -586,19 +588,22 @@ function updateCheckboxInNoteData(checkbox) {
     
     // Update the note content to reflect the new checkbox state
     var content = note.content;
-    var checkboxMatches = [];
-    var regex = /\[[x ]\]/gi;
-    var match;
-    var currentIndex = 0;
+    var checkboxCount = 0;
     
-    // Find all checkbox patterns and update the specific one
-    var updatedContent = content.replace(regex, function(matchedText, offset) {
-        if (currentIndex === checkboxIndex) {
-            currentIndex++;
-            return checkbox.checked ? '[x]' : '[ ]';
+    // Replace both markdown and HTML checkbox patterns
+    var updatedContent = content.replace(/(\[[ x]\]|<input[^>]*type="checkbox"[^>]*>)/gi, function(match) {
+        if (checkboxCount === checkboxIndex) {
+            checkboxCount++;
+            if (checkbox.checked) {
+                return match.includes('<input') ? 
+                    '<input type="checkbox" checked="checked">' : '[x]';
+            } else {
+                return match.includes('<input') ? 
+                    '<input type="checkbox">' : '[ ]';
+            }
         }
-        currentIndex++;
-        return matchedText;
+        checkboxCount++;
+        return match;
     });
     
     // Update the note data
@@ -607,7 +612,8 @@ function updateCheckboxInNoteData(checkbox) {
     console.log('Updated checkbox state in note data:', {
         noteIndex,
         checkboxIndex,
-        checked: checkbox.checked
+        checked: checkbox.checked,
+        updatedContent: updatedContent.substring(0, 100) + '...'
     });
 }
 
@@ -820,7 +826,7 @@ function checkTaskCompletion(container) {
     return false;
 }
 
-// Enhanced task list interaction with proper checkbox handling
+// Enhanced task list interaction with better checkbox state management
 function setupTaskListInteraction() {
     document.getElementById('notesContainer').addEventListener('click', function(event) {
         var listItem = event.target.closest('li');
@@ -829,10 +835,11 @@ function setupTaskListInteraction() {
             var checkbox = listItem.querySelector('input[type="checkbox"]');
             var wasChecked = checkbox.checked;
             
-            // Only toggle if we didn't click directly on the checkbox
-            if (event.target.type !== 'checkbox') {
-                checkbox.checked = !checkbox.checked;
-            }
+            // Always prevent the default checkbox behavior and handle it manually
+            event.preventDefault();
+            
+            // Toggle the checkbox state
+            checkbox.checked = !checkbox.checked;
             
             // Update checkbox state in the data model immediately
             updateCheckboxInNoteData(checkbox);
@@ -842,14 +849,25 @@ function setupTaskListInteraction() {
                 'rgba(46, 204, 113, 0.2)' : '';
             
             // Add strikethrough for completed tasks
-            var textContent = listItem.childNodes;
-            for (var i = 0; i < textContent.length; i++) {
-                if (textContent[i].nodeType === Node.TEXT_NODE) {
-                    textContent[i].parentElement.style.textDecoration = checkbox.checked ? 
-                        'line-through' : 'none';
-                    textContent[i].parentElement.style.opacity = checkbox.checked ? 
-                        '0.7' : '1';
+            var textNodes = [];
+            function findTextNodes(node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    textNodes.push(node);
+                } else {
+                    for (var i = 0; i < node.childNodes.length; i++) {
+                        findTextNodes(node.childNodes[i]);
+                    }
                 }
+            }
+            findTextNodes(listItem);
+            
+            // Apply styling to the list item itself
+            if (checkbox.checked) {
+                listItem.style.textDecoration = 'line-through';
+                listItem.style.opacity = '0.7';
+            } else {
+                listItem.style.textDecoration = 'none';
+                listItem.style.opacity = '1';
             }
             
             // Find the parent container
