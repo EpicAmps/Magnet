@@ -8,15 +8,15 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 ## 🎯 How It Works
 
 **Simple 3-Step Process:**
-1. **Setup:** Visit your fridge's web browser, enter your fridge's name (You gave it a name during initial setup. IE "StoneCold")
-2. **Get Tools:** Receive a unique email address and download a custom iOS Shortcut
-3. **Send Notes:** Share any note via iOS Shortcuts or email to your fridge!
+1. **Setup:** Visit your fridge's web browser, enter your Fridge's name (Ie "Kitchen" or whatever you named it when you first ran the Samsung setup wizard.)
+2. **Get Shortcut:** Receive a custom iOS Shortcut via email for your specific fridge
+3. **Send Notes:** Share any note via iOS Shortcuts - they appear directly on your fridge!
 
 **Universal Compatibility:**
 - ✅ **iOS Shortcuts:** Native integration with iPhone/iPad Share Sheet
-- ✅ **Email Support:** Send from any device via `incoming.magnet+stonecold@gmail.com`
+- ✅ **Direct Processing:** No email middleman - shortcuts send directly to your fridge
 - ✅ **Rich Features:** Checkboxes, task completion, family tags (`#dad`, `#mom`, `#jess`)
-- ✅ **No apps to install** - just use what you already have!
+- ✅ **No apps to install** - just use iOS Shortcuts!
 
 ---
 
@@ -25,13 +25,19 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 ### The Journey of Your Note
 
 1. **📱 iOS Share Sheet:** Share note from any app → "Send to Magnet" shortcut
-2. **📧 Email Processing:** Shortcut sends formatted email to `incoming.magnet+stonecold@gmail.com`
-3. **🔄 Pipedream Workflow:** Monitors Gmail inbox and detects new emails
-4. **📤 Webhook Processing:** Pipedream extracts content and sends to Vercel webhook
-5. **🧠 Content Processing:** Vercel converts markdown to HTML, fixes checkboxes
-6. **💾 Blob Storage:** Note saved to Vercel Blob with cleanup of old versions
-7. **⚡ Real-time Updates:** Fast 15-second polling keeps fridge updated
-8. **🎯 Smart Display:** Notes appear with task completion, tags, and celebrations
+2. **🌐 Direct to Vercel:** Shortcut sends content directly to Vercel webhook endpoint
+3. **🧠 Content Processing:** Vercel converts markdown to HTML, fixes checkboxes
+4. **💾 Blob Storage:** Note saved to Vercel Blob with cleanup of old versions
+5. **⚡ Real-time Updates:** Fast 15-second polling keeps fridge updated
+6. **🎯 Smart Display:** Notes appear with task completion, tags, and celebrations
+
+### Shortcut Generation Flow
+
+1. **🔧 Fridge Setup:** User enters fridge name on setup page
+2. **📤 Pipedream Trigger:** Vercel calls Pipedream workflow with fridge details
+3. **⚙️ Shortcut Creation:** Pipedream generates custom iOS Shortcut with unique webhook URL
+4. **📧 Email Delivery:** Pipedream emails the shortcut file to user for installation
+5. **📱 One-Tap Install:** User downloads and installs personalized shortcut
 
 ### Smart Features in Action
 
@@ -92,9 +98,9 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 - **Dynamic Blob Keys:** Handles Vercel's changing blob URL system
 
 ### External Integrations
-- **Gmail:** Email inbox monitoring via `incoming.magnet+fridgename@gmail.com`
-- **Pipedream:** Serverless email processing and webhook automation
+- **Pipedream:** Serverless shortcut generation and email delivery
 - **iOS Shortcuts:** Native iOS integration for seamless note sending
+- **Vercel Blob:** Persistent storage with automatic cleanup and versioning
 
 ---
 
@@ -139,8 +145,8 @@ magnet/
 - **`setup.html`** - Initial configuration, generates unique fridge ID and email address
 
 #### iOS Integration
-- **`generate-shortcut.js`** - Creates custom iOS Shortcuts with fridge-specific email addresses
-- **`send-shortcut-email.js`** - Emails generated shortcut to user for easy installation
+- **`generate-shortcut.js`** - Triggers Pipedream workflow to create custom iOS Shortcuts
+- **`send-shortcut-email.js`** - Called by Pipedream to email generated shortcut to user
 
 ---
 
@@ -159,18 +165,18 @@ magnet/
 
 ### For iOS Users
 
-1. **Scan QR code** on fridge setup page
-2. **Download "Send to Magnet" shortcut**
-3. **Grant permissions** for web access
-4. **Test:** Share any note → "Send to Magnet"
-5. **Watch it appear** on fridge within 15 seconds!
+1. **Scan QR code** on fridge setup page (triggers Pipedream shortcut generation)
+2. **Check your email** for the custom "Send to Magnet" shortcut
+3. **Download and install** the shortcut on your iPhone/iPad
+4. **Grant permissions** for web access
+5. **Test:** Share any note → "Send to Magnet"
+6. **Watch it appear** on fridge within 15 seconds!
 
 ### For Other Devices
 
-1. **Email directly:** `incoming.magnet+fridgename@gmail.com`
-2. **Subject:** Your note title
-3. **Body:** Your content with `#dad`, `#mom`, or `#jess` tags
-4. **Use checkboxes:** iOS Notes format or markdown `- [ ]` syntax
+1. **Use the web interface:** Visit your fridge's URL from any device
+2. **Manual entry:** Type notes directly in the web interface
+3. **Future:** Email support may be added back as an alternative method
 
 ---
 
