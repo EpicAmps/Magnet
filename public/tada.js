@@ -1013,24 +1013,24 @@ function initializeApp() {
         console.log('Starting notification system...');
         console.log('🚫 SSE disabled - using polling only');
         
-        // DON'T connect to SSE since it's broken
-        // connectToNotifications(); // ENABLED
+        // DON'T connect to SSE since it's causing issues
+        // connectToNotifications(); // DISABLED AGAIN
         
         startPollingBackup();
         fetchNote();
         setupTaskListInteraction();
         startCountdown();
         
-        // Add frequent polling since SSE is broken
+        // Keep 30-second polling since it was working
         console.log('🔄 Setting up 30-second polling...');
         setInterval(function() {
             console.log('🔄 Automatic polling check...');
             fetchNote();
-        }, 30000); // Check every 30 seconds
+        }, 30000);
         
-        // Update status to show we're using polling
+        // Update status
         setTimeout(function() {
-            document.getElementById('statusText').textContent = '🔄 Using backup polling (SSE disabled)';
+            document.getElementById('statusText').textContent = '🔄 Using polling (SSE disabled)';
         }, 2000);
     }
 }
