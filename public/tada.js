@@ -198,7 +198,7 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-/ Simplified displayNotes without tab system for now
+// Simplified displayNotes without tab system for now
 function displayNotes(notesData) {
     var notesContainer = document.getElementById('notesContainer');
     var paginationDiv = document.getElementById('pagination');
