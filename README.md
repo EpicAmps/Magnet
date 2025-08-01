@@ -197,20 +197,9 @@ WEBHOOK_SECRET=your_secure_random_string
 ## 🏗️ Project Structure
 
 ```
-magnet/
-├── api/
-│   ├── note.js                    # Note CRUD operations
-│   ├── email-webhook.js           # Legacy SendGrid webhook (deprecated)
-│   ├── ping.js                    # Real-time Server-Sent Events
-│   └── public/
-│       └── webhook.js             # Public webhook for Pipedream integration
-├── public/
-│   ├── magnet-logo.png           # Magnet logo asset
-│   ├── setup.html                # Fridge setup and naming
-│   └── fridge/
-│       └── [id].html             # Fridge-specific note display
-├── package.json                  # Dependencies and scripts
-└── README.md                     # This file
+- name: Readme Tree
+  uses: RavelloH/readme-tree@v1.1.0
+
 ```
 
 ---
