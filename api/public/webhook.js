@@ -9,6 +9,9 @@ marked.setOptions({
   sanitize: false,    // Allow HTML (we trust our own emails)
 });
 
+// Enable checkboxes (remove disabled attribute)
+formattedContent = formattedContent.replace(/(<input[^>]+)disabled[^>]*>/gi, '$1>');
+
 // Move fetchExistingNotes outside the handler - FIXED
 async function fetchExistingNotes(fridgeId) {
   try {
