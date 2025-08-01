@@ -823,6 +823,66 @@
                 font-size: 1.4rem;
             }
         }
+        /* COMPLETED NOTES STYLING */
+        .note-item.completed-note {
+            opacity: 0.75;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 255, 255, 0.95));
+            border-left: 4px solid #4CAF50;
+            transform: scale(0.98);
+            transition: all 0.3s ease;
+        }
+        
+        .note-content.completed-note {
+            opacity: 0.8;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 255, 255, 0.9));
+            border: 2px solid #4CAF50;
+            transform: scale(0.98);
+            transition: all 0.3s ease;
+        }
+        
+        .completion-badge {
+            background: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-right: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .note-item.completed-note:hover {
+            opacity: 0.9;
+            transform: scale(1);
+        }
+        
+        .note-content.completed-note:hover {
+            opacity: 0.95;
+            transform: scale(1);
+        }
+        
+        .note-item.completed-note {
+            animation: complete-bounce 0.5s ease-out;
+        }
+        
+        @keyframes complete-bounce {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(0.98); }
+        }
+        
+        .completed-note input[type="checkbox"]:checked {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.6));
+        }
+        
+        .completed-note li {
+            text-decoration: line-through;
+            opacity: 0.8;
+            background-color: rgba(76, 175, 80, 0.1) !important;
+        }
     </style>
 </head>
 <body>
