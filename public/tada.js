@@ -197,7 +197,7 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-    // Debug version of displayNotes with extensive logging
+// Debug version of displayNotes with extensive logging
 function displayNotes(notesData) {
     console.log('=== DISPLAY NOTES DEBUG ===');
     console.log('Raw notesData:', notesData);
