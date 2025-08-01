@@ -1133,61 +1133,47 @@ function checkTaskCompletion(container) {
     return false;
 }
 
-// Enhanced task list interaction with better checkbox state management
 function setupTaskListInteraction() {
     document.getElementById('notesContainer').addEventListener('click', function(event) {
-        var listItem = event.target.closest('li');
+        // Check if we clicked directly on a checkbox
+        if (event.target.type === 'checkbox') {
+            console.log('Direct checkbox click detected');
+            
+            var checkbox = event.target;
+            var listItem = checkbox.closest('li');
+            
+            // Let the checkbox handle its own toggle naturally
+            // Don't prevent default - let it work normally
+            
+            // Add visual feedback with a small delay to let the checkbox update first
+            setTimeout(function() {
+                updateCheckboxVisuals(checkbox, listItem);
+                updateCheckboxInNoteData(checkbox);
+                checkTaskInteraction(checkbox, listItem);
+            }, 10);
+            
+            return; // Exit early - we handled the checkbox click
+        }
         
+        // Handle clicks on the list item (but not on checkboxes)
+        var listItem = event.target.closest('li');
         if (listItem && listItem.querySelector('input[type="checkbox"]')) {
             var checkbox = listItem.querySelector('input[type="checkbox"]');
-            var wasChecked = checkbox.checked;
             
-            // Always prevent the default checkbox behavior and handle it manually
-            event.preventDefault();
-            
-            // Toggle the checkbox state
-            checkbox.checked = !checkbox.checked;
-            
-            // Update checkbox state in the data model immediately
-            updateCheckboxInNoteData(checkbox);
-            
-            // Visual feedback for checked state
-            listItem.style.backgroundColor = checkbox.checked ? 
-                'rgba(46, 204, 113, 0.2)' : '';
-            
-            // Add strikethrough for completed tasks
-            var textNodes = [];
-            function findTextNodes(node) {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    textNodes.push(node);
-                } else {
-                    for (var i = 0; i < node.childNodes.length; i++) {
-                        findTextNodes(node.childNodes[i]);
-                    }
-                }
-            }
-            findTextNodes(listItem);
-            
-            // Apply styling to the list item itself
-            if (checkbox.checked) {
-                listItem.style.textDecoration = 'line-through';
-                listItem.style.opacity = '0.7';
-            } else {
-                listItem.style.textDecoration = 'none';
-                listItem.style.opacity = '1';
-            }
-            
-            // Find the parent container
-            var noteContainer = listItem.closest('.note-content, .note-item-content');
-            if (noteContainer) {
-                // Check for completion only if we just checked a box
-                if (checkbox.checked && !wasChecked) {
-                    checkTaskCompletion(noteContainer);
-                }
-                // Check for resurrection if we just unchecked a box
-                else if (!checkbox.checked && wasChecked) {
-                    checkTaskResurrection(noteContainer);
-                }
+            // Only handle this if we didn't click directly on the checkbox
+            if (event.target !== checkbox) {
+                console.log('List item click detected (not on checkbox)');
+                
+                // Prevent default to avoid any unwanted behavior
+                event.preventDefault();
+                
+                // Toggle the checkbox state manually
+                checkbox.checked = !checkbox.checked;
+                
+                // Update visuals and data
+                updateCheckboxVisuals(checkbox, listItem);
+                updateCheckboxInNoteData(checkbox);
+                checkTaskInteraction(checkbox, listItem);
             }
         }
     });
@@ -1220,6 +1206,41 @@ function checkTaskResurrection(container) {
     }
     
     return false;
+}
+
+
+// Helper function to update visual styling
+function updateCheckboxVisuals(checkbox, listItem) {
+    // Visual feedback for checked state
+    listItem.style.backgroundColor = checkbox.checked ? 
+        'rgba(46, 204, 113, 0.2)' : '';
+    
+    // Apply styling to the list item itself
+    if (checkbox.checked) {
+        listItem.style.textDecoration = 'line-through';
+        listItem.style.opacity = '0.7';
+    } else {
+        listItem.style.textDecoration = 'none';
+        listItem.style.opacity = '1';
+    }
+}
+
+// Helper function to check for completion/resurrection
+function checkTaskInteraction(checkbox, listItem) {
+    var wasChecked = !checkbox.checked; // Opposite of current state since we just toggled
+    
+    // Find the parent container
+    var noteContainer = listItem.closest('.note-content, .note-item-content');
+    if (noteContainer) {
+        // Check for completion only if we just checked a box
+        if (checkbox.checked && !wasChecked) {
+            checkTaskCompletion(noteContainer);
+        }
+        // Check for resurrection if we just unchecked a box
+        else if (!checkbox.checked && wasChecked) {
+            checkTaskResurrection(noteContainer);
+        }
+    }
 }
 
 // Resurrect a note by moving it back to active status and top of list
