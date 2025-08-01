@@ -11,6 +11,10 @@ var isSSEWorking = false;
 var pollingInterval = null;
 var lastManualCheck = 0;
 
+// Tab filtering system
+var currentTab = 'all';
+var tabCounts = { all: 0, dad: 0, mom: 0, jess: 0 };
+
 // Celebration state tracking
 var celebrationInProgress = false;
 
@@ -193,67 +197,58 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-// Enhanced displayNotes to sort notes on initial load
-function displayNotes(notesData) {
-    var notesContainer = document.getElementById('notesContainer');
-    var paginationDiv = document.getElementById('pagination');
-    
-    // Handle both old format (single note) and new format (multiple notes)
-    if (notesData.notes && Array.isArray(notesData.notes)) {
-        allNotes = notesData.notes;
-    } else if (notesData.content) {
-        allNotes = [notesData]; // Convert old format
-    } else {
-        allNotes = [];
-    }
-    
-    // Check for completed notes and mark them
-    for (let i = 0; i < allNotes.length; i++) {
-        if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
-            allNotes[i].completed = true;
-            allNotes[i].completedAt = allNotes[i].completedAt || allNotes[i].timestamp;
+    // Enhanced displayNotes with tab support
+    function displayNotes(notesData) {
+        var notesContainer = document.getElementById('notesContainer');
+        var paginationDiv = document.getElementById('pagination');
+        
+        // Handle both old format (single note) and new format (multiple notes)
+        if (notesData.notes && Array.isArray(notesData.notes)) {
+            allNotes = notesData.notes;
+        } else if (notesData.content) {
+            allNotes = [notesData]; // Convert old format
+        } else {
+            allNotes = [];
         }
-    }
-    
-    // Sort notes: incomplete first, then completed (by completion time)
-    allNotes.sort((a, b) => {
-        if (a.completed && !b.completed) return 1;
-        if (!a.completed && b.completed) return -1;
-        if (a.completed && b.completed) {
-            return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
+        
+        // Check for completed notes and mark them
+        for (let i = 0; i < allNotes.length; i++) {
+            if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
+                allNotes[i].completed = true;
+                allNotes[i].completedAt = allNotes[i].completedAt || allNotes[i].timestamp;
+            }
         }
-        return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
-    });
-    
-    if (allNotes.length === 0) {
-        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
-        paginationDiv.style.display = 'none';
-        document.getElementById('statusText').textContent = '⏳ No notes yet';
-        return;
+        
+        // Sort notes: incomplete first, then completed (by completion time)
+        allNotes.sort((a, b) => {
+            if (a.completed && !b.completed) return 1;
+            if (!a.completed && b.completed) return -1;
+            if (a.completed && b.completed) {
+                return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
+            }
+            return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
+        });
+        
+        // Update tab counts
+        updateTabCounts();
+        
+        if (allNotes.length === 0) {
+            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
+            paginationDiv.style.display = 'none';
+            document.getElementById('statusText').textContent = '⏳ No notes yet';
+            return;
+        }
+        
+        renderCurrentPage();
+        updatePagination();
+        updateStatusForTab();
+        
+        // Update timestamp with latest note
+        var latestNote = allNotes[0];
+        document.getElementById('timestamp').textContent = 
+            'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
+        lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
     }
-    
-    renderCurrentPage();
-    updatePagination();
-    
-    // Update status with completion info
-    var totalNotes = allNotes.length;
-    var completedNotes = allNotes.filter(note => note.completed).length;
-    var activeNotes = totalNotes - completedNotes;
-    var latestNote = allNotes.find(note => !note.completed) || allNotes[0];
-    
-    if (activeNotes > 0) {
-        document.getElementById('statusText').textContent = '📧 ' + activeNotes + ' active note' + 
-            (activeNotes > 1 ? 's' : '') + (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '') +
-            ' from ' + (latestNote.sender || 'someone');
-    } else {
-        document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed!';
-    }
-    
-    // Update timestamp
-    document.getElementById('timestamp').textContent = 
-        'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
-    lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
-}
 
 
 // Enhanced content formatter that properly handles checkboxes with preserved state
@@ -288,18 +283,29 @@ function formatNoteContentWithCheckboxes(content) {
     return displayContent;
 }
 
-// Enhanced renderCurrentPage with no duplicate titles
+// Enhanced renderCurrentPage with tab filtering
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
+    
+    // Filter notes based on current tab
+    var filteredNotes = filterNotesByTab(allNotes);
+    
     var startIndex = currentPage * notesPerPage;
     var endIndex = startIndex + notesPerPage;
-    var currentNotes = allNotes.slice(startIndex, endIndex);
+    var currentNotes = filteredNotes.slice(startIndex, endIndex);
     
-    if (currentNotes.length === 1 && allNotes.length === 1) {
+    if (filteredNotes.length === 0) {
+        var tabName = currentTab === 'all' ? 'All' : currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
+        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes in ' + tabName + ' tab</div></div>';
+        return;
+    }
+    
+    if (currentNotes.length === 1 && filteredNotes.length === 1) {
         // Single note - use full-width display with delete button
         var note = currentNotes[0];
+        var noteIndex = allNotes.indexOf(note); // Get original index
         var content = formatNoteContentWithCheckboxes(note.content);
-        var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(0, \'' + 
+        var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + noteIndex + ', \'' + 
             (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
         
         var containerClass = 'note-content single-note-container';
@@ -314,7 +320,8 @@ function renderCurrentPage() {
         var html = '';
         for (var i = 0; i < currentNotes.length; i++) {
             var note = currentNotes[i];
-            var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + i + ', \'' + 
+            var noteIndex = allNotes.indexOf(note); // Get original index
+            var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + noteIndex + ', \'' + 
                 (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
             
             var noteClass = 'note-item';
@@ -393,13 +400,15 @@ function extractAndCleanNoteTitle(content) {
     return { title: 'Note from iPhone', content: originalContent };
 }
 
+// Enhanced updatePagination with tab filtering
 function updatePagination() {
     var paginationDiv = document.getElementById('pagination');
     var pageInfo = document.getElementById('pageInfo');
     var prevBtn = document.getElementById('prevBtn');
     var nextBtn = document.getElementById('nextBtn');
     
-    var totalPages = Math.ceil(allNotes.length / notesPerPage);
+    var filteredNotes = filterNotesByTab(allNotes);
+    var totalPages = Math.ceil(filteredNotes.length / notesPerPage);
     
     if (totalPages <= 1) {
         paginationDiv.style.display = 'none';
@@ -421,6 +430,119 @@ function changePage(direction) {
         currentPage = newPage;
         renderCurrentPage();
         updatePagination();
+    }
+}
+
+// Extract tags from note content
+function extractNoteTags(content) {
+    if (!content) return [];
+    
+    var tags = [];
+    var tagMatches = content.match(/#(dad|mom|jess)\b/gi);
+    
+    if (tagMatches) {
+        tagMatches.forEach(function(tag) {
+            var cleanTag = tag.toLowerCase().replace('#', '');
+            if (!tags.includes(cleanTag)) {
+                tags.push(cleanTag);
+            }
+        });
+    }
+    
+    return tags;
+}
+
+// Filter notes by current tab
+function filterNotesByTab(notes) {
+    if (currentTab === 'all') {
+        return notes;
+    }
+    
+    return notes.filter(function(note) {
+        var tags = extractNoteTags(note.content);
+        return tags.includes(currentTab);
+    });
+}
+
+// Update tab counts
+function updateTabCounts() {
+    tabCounts = { all: 0, dad: 0, mom: 0, jess: 0 };
+    
+    allNotes.forEach(function(note) {
+        tabCounts.all++;
+        
+        var tags = extractNoteTags(note.content);
+        tags.forEach(function(tag) {
+            if (tabCounts[tag] !== undefined) {
+                tabCounts[tag]++;
+            }
+        });
+        
+        // If note has no recognized tags, it only counts toward "all"
+        if (tags.length === 0) {
+            // Already counted in "all" above
+        }
+    });
+    
+    updateTabDisplay();
+}
+
+// Update tab display with counts
+function updateTabDisplay() {
+    var tabs = ['all', 'dad', 'mom', 'jess'];
+    var tabNames = { all: 'All', dad: 'Dad', mom: 'Mom', jess: 'Jess' };
+    
+    tabs.forEach(function(tab) {
+        var tabElement = document.getElementById('tab-' + tab);
+        if (tabElement) {
+            var count = tabCounts[tab];
+            var displayText = tabNames[tab];
+            
+            if (count > 0) {
+                displayText += ' (' + count + ')';
+            }
+            
+            tabElement.textContent = displayText;
+            
+            // Update active state
+            if (tab === currentTab) {
+                tabElement.classList.add('active');
+            } else {
+                tabElement.classList.remove('active');
+            }
+        }
+    });
+}
+
+// Switch to a specific tab
+function switchToTab(tab) {
+    if (tab === currentTab) return;
+    
+    currentTab = tab;
+    currentPage = 0; // Reset to first page when switching tabs
+    
+    updateTabDisplay();
+    renderCurrentPage();
+    updatePagination();
+    updateStatusForTab();
+}
+
+// Update status message for current tab
+function updateStatusForTab() {
+    var filteredNotes = filterNotesByTab(allNotes);
+    var totalNotes = filteredNotes.length;
+    var completedNotes = filteredNotes.filter(note => note.completed).length;
+    var activeNotes = totalNotes - completedNotes;
+    
+    var tabName = currentTab === 'all' ? 'All' : currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
+    
+    if (totalNotes === 0) {
+        document.getElementById('statusText').textContent = '📱 No notes in ' + tabName + ' tab';
+    } else if (activeNotes > 0) {
+        document.getElementById('statusText').textContent = '📧 ' + tabName + ': ' + activeNotes + ' active' + 
+            (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '');
+    } else {
+        document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed in ' + tabName + '!';
     }
 }
 
