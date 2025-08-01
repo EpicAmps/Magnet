@@ -251,7 +251,7 @@ function isNoteCompleted(note) {
     }
 
 
-// Enhanced content formatter that properly handles checkboxes with preserved state
+// Enhanced content formatter that handles Unicode checkboxes
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -270,8 +270,16 @@ function formatNoteContentWithCheckboxes(content) {
         return displayContent;
     }
     
-    // Handle both HTML and plain text - convert markdown checkboxes to HTML checkboxes
-    // Make sure checked boxes stay checked and unchecked boxes stay unchecked
+    // Handle Unicode checkboxes from iOS Notes
+    // ☑ ✓ ✔ = checked checkboxes
+    displayContent = displayContent.replace(/☑/g, '<input type="checkbox" checked="checked">');
+    displayContent = displayContent.replace(/✓/g, '<input type="checkbox" checked="checked">');
+    displayContent = displayContent.replace(/✔/g, '<input type="checkbox" checked="checked">');
+    
+    // ☐ = unchecked checkbox
+    displayContent = displayContent.replace(/☐/g, '<input type="checkbox">');
+    
+    // Handle traditional markdown checkboxes
     displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked="checked">');
     displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
     
