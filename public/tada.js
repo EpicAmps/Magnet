@@ -284,14 +284,21 @@ function formatNoteContentWithCheckboxes(content) {
     // Remove the generic "Note from iPhone" h1 if it exists
     displayContent = displayContent.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
-    // Enable the disabled checkboxes and make them clickable
-    displayContent = displayContent.replace(/<input[^>]*disabled[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox">');
-    displayContent = displayContent.replace(/<input[^>]*type="checkbox"[^>]*disabled[^>]*>/gi, '<input type="checkbox">');
+    // FIXED: Properly handle checkboxes - preserve checked state and remove disabled attribute
+    // Handle checked checkboxes first
+    displayContent = displayContent.replace(/<input[^>]*type="checkbox"[^>]*checked[^>]*disabled[^>]*>/gi, '<input type="checkbox" checked>');
+    displayContent = displayContent.replace(/<input[^>]*disabled[^>]*type="checkbox"[^>]*checked[^>]*>/gi, '<input type="checkbox" checked>');
+    displayContent = displayContent.replace(/<input[^>]*checked[^>]*type="checkbox"[^>]*disabled[^>]*>/gi, '<input type="checkbox" checked>');
+    displayContent = displayContent.replace(/<input[^>]*checked[^>]*disabled[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox" checked>');
+    
+    // Handle unchecked checkboxes
+    displayContent = displayContent.replace(/<input[^>]*type="checkbox"[^>]*disabled[^>]*(?!checked)>/gi, '<input type="checkbox">');
+    displayContent = displayContent.replace(/<input[^>]*disabled[^>]*type="checkbox"[^>]*(?!checked)>/gi, '<input type="checkbox">');
     
     // Remove empty paragraphs that might be left over
     displayContent = displayContent.replace(/<p[^>]*>\s*<\/p>/gi, '');
     
-    // KEEP TAGS IN DISPLAY - Style them nicely instead of removing them
+    // Style tags nicely instead of removing them
     displayContent = displayContent.replace(/<p[^>]*>\s*(#(?:dad|mom|jess))\s*<\/p>/gi, '<div class="note-tag">$1</div>');
     
     return displayContent.trim();
