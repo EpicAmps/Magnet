@@ -8,13 +8,13 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 ## 🎯 How It Works
 
 **Simple 3-Step Process:**
-1. **Setup:** Visit your fridge's web browser, enter a name (like "Kitchen")
+1. **Setup:** Visit your fridge's web browser, enter your fridge's name (You gave it a name during initial setup. IE "StoneCold")
 2. **Get Tools:** Receive a unique email address and download a custom iOS Shortcut
 3. **Send Notes:** Share any note via iOS Shortcuts or email to your fridge!
 
 **Universal Compatibility:**
 - ✅ **iOS Shortcuts:** Native integration with iPhone/iPad Share Sheet
-- ✅ **Email Support:** Send from any device via `incoming.magnet+kitchen@gmail.com`
+- ✅ **Email Support:** Send from any device via `incoming.magnet+stonecold@gmail.com`
 - ✅ **Rich Features:** Checkboxes, task completion, family tags (`#dad`, `#mom`, `#jess`)
 - ✅ **No apps to install** - just use what you already have!
 
@@ -25,7 +25,7 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 ### The Journey of Your Note
 
 1. **📱 iOS Share Sheet:** Share note from any app → "Send to Magnet" shortcut
-2. **📧 Email Processing:** Shortcut sends formatted email to `incoming.magnet+kitchen@gmail.com`
+2. **📧 Email Processing:** Shortcut sends formatted email to `incoming.magnet+stonecold@gmail.com`
 3. **🔄 Pipedream Workflow:** Monitors Gmail inbox and detects new emails
 4. **📤 Webhook Processing:** Pipedream extracts content and sends to Vercel webhook
 5. **🧠 Content Processing:** Vercel converts markdown to HTML, fixes checkboxes
