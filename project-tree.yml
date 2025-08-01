@@ -1,0 +1,13 @@
+name: Insert Project Tree
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Insert Project Tree
+        uses: smoothbear/project-tree-action@1.1.0
