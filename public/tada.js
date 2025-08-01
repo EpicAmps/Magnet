@@ -315,13 +315,14 @@ function nextNote() {
     changePage(1);
 }
 
+// Global delete function (deletes all notes)
 function deleteNote() {
-    if (!confirm('Are you sure you want to delete all notes?')) {
+    if (!confirm('Are you sure you want to delete ALL notes?')) {
         return;
     }
     
     updateConnectionStatus(true);
-    document.getElementById('statusText').textContent = '🗑️ Deleting notes...';
+    document.getElementById('statusText').textContent = '🗑️ Deleting all notes...';
     
     fetch(API_BASE + '/api/note', {
         method: 'DELETE',
@@ -329,26 +330,114 @@ function deleteNote() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            fridgeId: fridgeId
+            fridgeId: fridgeId,
+            deleteAll: true
         })
     })
     .then(function(response) {
         if (response.ok) {
+            // Clear ALL frontend state immediately
             allNotes = [];
             currentPage = 0;
+            lastUpdate = 0;
+            
+            // Clear any cached data
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('cachedNotes_' + fridgeId);
+                localStorage.removeItem('lastUpdate_' + fridgeId);
+            }
+            
+            // Update UI immediately
             var notesContainer = document.getElementById('notesContainer');
-            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 Notes deleted!<br><br>Send a new note to see it here!</div></div>';
+            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 All notes deleted!<br><br>Send a new note to see it here!</div></div>';
+            
+            // Hide pagination
             document.getElementById('pagination').style.display = 'none';
+            
+            // Update status and timestamp
             document.getElementById('statusText').textContent = '✅ All notes deleted!';
             document.getElementById('timestamp').textContent = 'Deleted: ' + new Date().toLocaleString();
-            lastUpdate = 0;
+            
+            // Force a fresh fetch after a short delay to confirm deletion
+            setTimeout(function() {
+                fetchNote();
+            }, 1000);
+            
         } else {
-            throw new Error('Failed to delete notes');
+            throw new Error('Failed to delete notes: ' + response.status);
         }
     })
     .catch(function(error) {
         console.error('Error deleting notes:', error);
         document.getElementById('statusText').textContent = '❌ Error deleting notes. Try again.';
+        
+        // Still clear frontend state even if backend fails
+        allNotes = [];
+        currentPage = 0;
+        renderCurrentPage();
+        updatePagination();
+    });
+}
+
+// Individual note delete function
+function deleteIndividualNote(noteIndex, noteId) {
+    if (!confirm('Are you sure you want to delete this note?')) {
+        return;
+    }
+    
+    // Calculate the actual index in the allNotes array
+    var actualIndex = (currentPage * notesPerPage) + noteIndex;
+    var noteToDelete = allNotes[actualIndex];
+    
+    if (!noteToDelete) {
+        console.error('Note not found at index:', actualIndex);
+        return;
+    }
+    
+    document.getElementById('statusText').textContent = '🗑️ Deleting note...';
+    
+    fetch(API_BASE + '/api/note', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            fridgeId: fridgeId,
+            noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
+            deleteAll: false
+        })
+    })
+    .then(function(response) {
+        if (response.ok) {
+            // Remove note from frontend array
+            allNotes.splice(actualIndex, 1);
+            
+            // Adjust current page if we deleted the last note on this page
+            var totalPages = Math.ceil(allNotes.length / notesPerPage);
+            if (currentPage >= totalPages && currentPage > 0) {
+                currentPage = totalPages - 1;
+            }
+            
+            // Re-render the current page
+            if (allNotes.length === 0) {
+                var notesContainer = document.getElementById('notesContainer');
+                notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes left!<br><br>Send a new note to see it here!</div></div>';
+                document.getElementById('pagination').style.display = 'none';
+                document.getElementById('statusText').textContent = '✅ Note deleted!';
+            } else {
+                renderCurrentPage();
+                updatePagination();
+                var totalNotes = allNotes.length;
+                document.getElementById('statusText').textContent = '✅ Note deleted! ' + totalNotes + ' note' + (totalNotes > 1 ? 's' : '') + ' remaining';
+            }
+            
+        } else {
+            throw new Error('Failed to delete note: ' + response.status);
+        }
+    })
+    .catch(function(error) {
+        console.error('Error deleting individual note:', error);
+        document.getElementById('statusText').textContent = '❌ Error deleting note. Try again.';
     });
 }
 
