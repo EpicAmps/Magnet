@@ -166,23 +166,44 @@ function fetchNote() {
     startCountdown(); 
     console.log('=== FETCH NOTE DEBUG ===');
     console.log('Fetching notes for fridgeId:', fridgeId);
+    console.log('Current time:', new Date().toISOString());
+    console.log('Last update timestamp:', lastUpdate);
+    console.log('Current allNotes count:', allNotes.length);
     
     fetch(API_BASE + '/api/note?fridgeId=' + fridgeId)
         .then(function(response) {
             console.log('Response status:', response.status);
             console.log('Response headers:', response.headers);
+            console.log('Response timestamp:', new Date().toISOString());
             return response.json();
         })
         .then(function(data) {
             console.log('=== RAW DATA RECEIVED ===');
             console.log('Full response:', JSON.stringify(data, null, 2));
+            console.log('Data lastUpdated:', data.lastUpdated);
+            console.log('Our lastUpdate:', lastUpdate);
+            console.log('Data is newer?', data.lastUpdated > lastUpdate);
             
             if (data.notes && data.notes.length > 0) {
-                console.log('=== FIRST NOTE ANALYSIS ===');
-                console.log('First note content:', data.notes[0].content);
-                console.log('Content length:', data.notes[0].content?.length);
-                console.log('Contains checkboxes?', data.notes[0].content?.includes('checkbox'));
-                console.log('Contains input tags?', data.notes[0].content?.includes('<input'));
+                console.log('=== NOTE ANALYSIS ===');
+                console.log('Total notes in response:', data.notes.length);
+                data.notes.forEach((note, index) => {
+                    console.log(`Note ${index}:`, {
+                        id: note.id,
+                        timestamp: note.timestamp,
+                        timestampDate: new Date(note.timestamp).toISOString(),
+                        sender: note.sender,
+                        subject: note.subject,
+                        contentLength: note.content?.length,
+                        isNewer: note.timestamp > lastUpdate
+                    });
+                });
+                
+                // Check if we have any notes newer than our last update
+                const newerNotes = data.notes.filter(note => note.timestamp > lastUpdate);
+                console.log('Notes newer than lastUpdate:', newerNotes.length);
+            } else {
+                console.log('No notes in response');
             }
             
             displayNotes(data);
@@ -197,6 +218,7 @@ function fetchNote() {
             updateConnectionStatus(false);
         });
 }
+
 // Helper function to check if a note has all tasks completed (for initial load)
 function isNoteCompleted(note) {
     if (!note.content) return false;
