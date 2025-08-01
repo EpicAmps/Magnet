@@ -11,6 +11,9 @@ var isSSEWorking = false;
 var pollingInterval = null;
 var lastManualCheck = 0;
 
+// Celebration state tracking
+var celebrationInProgress = false;
+
 // Multi-note support - NEW APPROACH
 var allNotes = [];
 var currentPage = 0;
@@ -491,6 +494,8 @@ function initializeApp() {
     }
 }
 
+
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
     if (eventSource) {
@@ -503,3 +508,166 @@ window.addEventListener('beforeunload', function() {
         clearInterval(countdownInterval);
     }
 });
+
+// Create celebration audio
+function createTadaSound() {
+    // Create a simple, triumphant "tada" sound using Web Audio API
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTone(frequency, duration, delay = 0) {
+        setTimeout(() => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }, delay);
+    }
+    
+    // Play a triumphant sequence: C - E - G - C (major chord arpeggio)
+    playTone(523.25, 0.3, 0);    // C5
+    playTone(659.25, 0.3, 100);  // E5  
+    playTone(783.99, 0.3, 200);  // G5
+    playTone(1046.50, 0.5, 300); // C6
+}
+
+// Create celebration overlay
+function createCelebrationOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'celebration-overlay';
+    overlay.innerHTML = `
+        <div class="celebration-content">
+            <div class="big-checkmark">✓</div>
+            <div class="celebration-text">TADA!</div>
+            <div class="celebration-subtext">All tasks completed! 🎉</div>
+        </div>
+        <div class="confetti-container"></div>
+    `;
+    
+    document.body.appendChild(overlay);
+    return overlay;
+}
+
+// Create confetti particle
+function createConfettiPiece() {
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#6c5ce7', '#fd79a8'];
+    const shapes = ['square', 'circle', 'triangle'];
+    
+    const confetti = document.createElement('div');
+    confetti.className = `confetti-piece ${shapes[Math.floor(Math.random() * shapes.length)]}`;
+    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.animationDelay = Math.random() * 3 + 's';
+    confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+    
+    return confetti;
+}
+
+// Main celebration function
+function triggerCelebration() {
+    if (celebrationInProgress) return;
+    celebrationInProgress = true;
+    
+    console.log('🎉 TADA! All tasks completed!');
+    
+    // Create and show celebration overlay
+    const overlay = createCelebrationOverlay();
+    
+    // Add confetti
+    const confettiContainer = overlay.querySelector('.confetti-container');
+    for (let i = 0; i < 50; i++) {
+        confettiContainer.appendChild(createConfettiPiece());
+    }
+    
+    // Play celebration sound
+    try {
+        createTadaSound();
+    } catch (error) {
+        console.log('Audio context not available:', error);
+    }
+    
+    // Animate in
+    requestAnimationFrame(() => {
+        overlay.classList.add('show');
+    });
+    
+    // Remove after celebration
+    setTimeout(() => {
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+            celebrationInProgress = false;
+        }, 500);
+    }, 3000);
+}
+
+// Check if all tasks are completed
+function checkTaskCompletion(container) {
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    
+    if (checkboxes.length === 0) return false; // No checkboxes
+    if (checkboxes.length === 1) return false; // Only one task doesn't warrant celebration
+    
+    const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
+    const allCompleted = checkboxes.length === checkedBoxes.length;
+    
+    if (allCompleted) {
+        // Small delay to let the final checkbox animation complete
+        setTimeout(triggerCelebration, 300);
+        return true;
+    }
+    
+    return false;
+}
+
+// Enhanced task list interaction with celebration
+function setupTaskListInteraction() {
+    document.getElementById('notesContainer').addEventListener('click', function(event) {
+        var listItem = event.target.closest('li');
+        
+        if (listItem && listItem.querySelector('input[type="checkbox"]')) {
+            var checkbox = listItem.querySelector('input[type="checkbox"]');
+            var wasChecked = checkbox.checked;
+            
+            if (event.target.type !== 'checkbox') {
+                checkbox.checked = !checkbox.checked;
+            }
+            
+            // Visual feedback for checked state
+            listItem.style.backgroundColor = checkbox.checked ? 
+                'rgba(46, 204, 113, 0.2)' : '';
+            
+            // Add strikethrough for completed tasks
+            var textContent = listItem.childNodes;
+            for (var i = 0; i < textContent.length; i++) {
+                if (textContent[i].nodeType === Node.TEXT_NODE) {
+                    textContent[i].parentElement.style.textDecoration = checkbox.checked ? 
+                        'line-through' : 'none';
+                    textContent[i].parentElement.style.opacity = checkbox.checked ? 
+                        '0.7' : '1';
+                }
+            }
+            
+            // Check for completion only if we just checked a box (not unchecked)
+            if (checkbox.checked && !wasChecked) {
+                // Find the parent container (could be note-content or note-item-content)
+                var noteContainer = listItem.closest('.note-content, .note-item-content');
+                if (noteContainer) {
+                    checkTaskCompletion(noteContainer);
+                }
+            }
+        }
+    });
+}
