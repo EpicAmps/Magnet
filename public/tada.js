@@ -217,19 +217,29 @@ function renderCurrentPage() {
     var currentNotes = allNotes.slice(startIndex, endIndex);
     
     if (currentNotes.length === 1 && allNotes.length === 1) {
-        // Single note - use full-width display
+        // Single note - use full-width display with delete button
         var note = currentNotes[0];
         var content = formatNoteContent(note.content);
-        notesContainer.innerHTML = '<div class="note-content">' + content + '</div>';
+        var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(0, \'' + 
+            (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
+        
+        notesContainer.innerHTML = '<div class="note-content single-note-container">' + 
+            deleteBtn + content + '</div>';
     } else {
-        // Multiple notes - use card layout
+        // Multiple notes - use card layout with individual delete buttons
         var html = '';
         for (var i = 0; i < currentNotes.length; i++) {
             var note = currentNotes[i];
+            var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + i + ', \'' + 
+                (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
+            
             html += '<div class="note-item">' +
                 '<div class="note-meta">' +
                 '<span class="note-sender">' + (note.sender || note.source || 'Unknown') + '</span>' +
+                '<div class="note-meta-right">' +
                 '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
+                deleteBtn +
+                '</div>' +
                 '</div>' +
                 '<div class="note-item-content">' + formatNoteContent(note.content) + '</div>' +
                 '</div>';
