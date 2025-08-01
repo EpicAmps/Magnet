@@ -342,7 +342,7 @@
             margin-bottom: 0;
         }
         
-        .note-meta {
+        note-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -351,6 +351,12 @@
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             font-size: 0.9rem;
             opacity: 0.8;
+        }
+    
+        .note-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .note-sender {
@@ -366,6 +372,18 @@
         .note-item-content {
             font-size: 1.2rem;
             line-height: 1.6;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .individual-delete-btn {
+                width: 40px;
+                height: 40px;
+            }
+            
+            .single-note-container .individual-delete-btn {
+                width: 44px;
+                height: 44px;
+            }
         }
         
         /* Apply all your existing note content styles to note items */
@@ -532,7 +550,44 @@
         .setup-btn:hover {
             background: #1976D2;
         }
+        /* Individual delete button styling */
+        .individual-delete-btn {
+            background: rgba(231, 76, 60, 0.8);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin-left: 10px;
+        }
         
+        .individual-delete-btn:hover {
+            background: rgba(231, 76, 60, 1);
+            transform: scale(1.1);
+        }
+        
+        .individual-delete-btn:active {
+            transform: scale(0.95);
+        }
+        
+        /* For single note view - position delete button in top right */
+        .single-note-container {
+            position: relative;
+        }
+        
+        .single-note-container .individual-delete-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            width: 36px;
+            height: 36px;
+        }
         .timestamp {
             text-align: center;
             margin-top: 15px;
