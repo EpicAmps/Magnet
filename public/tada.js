@@ -9,7 +9,7 @@ var fridgeId = null;
 var fridgeName = null;
 var lastSSEMessage = Date.now();
 var isSSEWorking = false;// Track connected fridge clients by fridge ID
-const fridgeClients = new Map(); // fridgeId -> Set of response objects
+
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {
@@ -1018,7 +1018,7 @@ function initializeApp() {
         console.log('🚫 SSE disabled - using polling only');
         
         // DON'T connect to SSE since it's broken
-        connectToNotifications(); // ENABLED
+        // connectToNotifications(); // ENABLED
         
         startPollingBackup();
         fetchNote();
