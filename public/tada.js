@@ -1,3 +1,4 @@
+// tada.js
 // Simple Samsung Family Hub compatible JavaScript
 'use strict';
 
