@@ -197,8 +197,21 @@ export default async function handler(req, res) {
     const allNotes = [noteData, ...existingData.notes].slice(0, 10); // Keep newest 10 notes
     console.log('Total notes after adding email:', allNotes.length);
     
-    // Save updated notes array - SINGLE SAVE OPERATION
+   // Save updated notes array - SINGLE SAVE OPERATION WITH CLEANUP
     const blobKey = `fridge-${fridgeId}.json`;
+    
+    // Delete old blobs first to prevent accumulation
+    try {
+      const { blobs } = await list({ prefix: `fridge-${fridgeId}` });
+      for (const blob of blobs) {
+        await del(blob.url);
+      }
+      console.log(`Cleaned up ${blobs.length} old blob files`);
+    } catch (cleanupError) {
+      console.log('Blob cleanup failed (non-critical):', cleanupError.message);
+    }
+    
+    // Now save the new data
     await put(blobKey, JSON.stringify({ 
       notes: allNotes,
       lastUpdated: Date.now(),
