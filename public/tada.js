@@ -251,7 +251,7 @@ function isNoteCompleted(note) {
     }
 
 
-// Enhanced content formatter that handles Unicode checkboxes
+/ Enhanced content formatter for HTML with disabled checkboxes
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -262,33 +262,26 @@ function formatNoteContentWithCheckboxes(content) {
     displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
     displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
     displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<p[^>]*class="sender-attribution"[^>]*>.*?<\/p>/gi, '');
     displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
     
-    // Handle HTML content (from markdown) - preserve existing checkboxes if they exist
-    if (displayContent.includes('<input type="checkbox"')) {
-        // Already has HTML checkboxes, just return as-is
-        return displayContent;
-    }
+    // Remove the generic "Note from iPhone" h1 if it exists
+    displayContent = displayContent.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
-    // Handle Unicode checkboxes from iOS Notes
-    // ☑ ✓ ✔ = checked checkboxes
-    displayContent = displayContent.replace(/☑/g, '<input type="checkbox" checked="checked">');
-    displayContent = displayContent.replace(/✓/g, '<input type="checkbox" checked="checked">');
-    displayContent = displayContent.replace(/✔/g, '<input type="checkbox" checked="checked">');
+    // Enable the disabled checkboxes and make them clickable
+    displayContent = displayContent.replace(/<input\s+disabled[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox">');
+    displayContent = displayContent.replace(/<input\s+type="checkbox"\s+disabled[^>]*>/gi, '<input type="checkbox">');
     
-    // ☐ = unchecked checkbox
-    displayContent = displayContent.replace(/☐/g, '<input type="checkbox">');
+    // Also handle any other variations
+    displayContent = displayContent.replace(/\s*disabled\s*=\s*["\'][^"\']*["\']|\s*disabled\s*/gi, '');
     
-    // Handle traditional markdown checkboxes
-    displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked="checked">');
-    displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
+    // Remove empty paragraphs that might be left over
+    displayContent = displayContent.replace(/<p[^>]*>\s*<\/p>/gi, '');
     
-    // Convert line breaks to HTML if it's plain text
-    if (!displayContent.includes('<') || !displayContent.includes('>')) {
-        displayContent = displayContent.replace(/\n/g, '<br>');
-    }
+    // Remove tags from display (they'll be handled by the tab system)
+    displayContent = displayContent.replace(/<p[^>]*>\s*#\w+\s*<\/p>/gi, '');
     
-    return displayContent;
+    return displayContent.trim();
 }
 
 // Enhanced renderCurrentPage with consistent layout across all tabs
@@ -344,7 +337,7 @@ function renderCurrentPage() {
     notesContainer.innerHTML = html;
 }
 
-// Extract title and return cleaned content without the title
+// Enhanced title extraction for HTML format
 function extractAndCleanNoteTitle(content) {
     if (!content) return { title: 'Note from iPhone', content: content };
     
@@ -352,44 +345,32 @@ function extractAndCleanNoteTitle(content) {
     var extractedTitle = 'Note from iPhone';
     var cleanedContent = content;
     
-    // Try to find first HTML heading (H1, H2, H3) and remove it
-    var headingMatch = content.match(/(<h[1-3][^>]*>)([^<]+)(<\/h[1-3]>)/i);
-    if (headingMatch) {
-        extractedTitle = headingMatch[2].trim();
-        cleanedContent = content.replace(headingMatch[0], '').trim();
-        return { title: extractedTitle, content: cleanedContent };
-    }
+    console.log('=== TITLE EXTRACTION DEBUG ===');
+    console.log('Original content:', content);
     
-    // Try to find markdown-style heading and remove it
-    var markdownMatch = content.match(/^(#+\s*)(.+)$/m);
-    if (markdownMatch) {
-        extractedTitle = markdownMatch[2].trim();
-        cleanedContent = content.replace(markdownMatch[0], '').replace(/^\n+/, '').trim();
-        return { title: extractedTitle, content: cleanedContent };
-    }
+    // Remove the generic "Note from iPhone" h1 first
+    cleanedContent = content.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
-    // Try to find a title-like first line and remove it
-    var lines = content.replace(/<[^>]*>/g, '').split(/\n|<br\s*\/?>/i);
-    var firstLine = lines[0];
-    if (firstLine && firstLine.trim().length > 0 && firstLine.trim().length < 50) {
-        // Check if it's not a checkbox item or list item
-        if (!firstLine.match(/^\s*[\[\-\*•]\s*/)) {
-            extractedTitle = firstLine.trim();
-            // Remove the first line from content
-            if (content.includes('<br>')) {
-                cleanedContent = content.replace(new RegExp('^[^<]*<br\\s*/?>', 'i'), '').trim();
-            } else {
-                var contentLines = content.split('\n');
-                contentLines.shift(); // Remove first line
-                cleanedContent = contentLines.join('\n').trim();
-            }
+    // Look for the first <p> tag after removing the generic title - this is likely our real title
+    var firstParagraphMatch = cleanedContent.match(/<p[^>]*>([^<]+)<\/p>/i);
+    if (firstParagraphMatch) {
+        var potentialTitle = firstParagraphMatch[1].trim();
+        
+        // Make sure it's not a tag (starts with #) and is a reasonable length
+        if (!potentialTitle.match(/^#\w+/) && potentialTitle.length > 2 && potentialTitle.length < 80) {
+            extractedTitle = potentialTitle;
+            // Remove this paragraph from the content
+            cleanedContent = cleanedContent.replace(firstParagraphMatch[0], '').trim();
+            
+            console.log('Found paragraph title:', extractedTitle);
             return { title: extractedTitle, content: cleanedContent };
         }
     }
     
-    // Default fallback - no title found, return original content
-    return { title: 'Note from iPhone', content: originalContent };
+    console.log('No custom title found, using default');
+    return { title: 'Note from iPhone', content: cleanedContent };
 }
+
 
 // Enhanced updatePagination with tab filtering
 function updatePagination() {
@@ -424,15 +405,30 @@ function changePage(direction) {
     }
 }
 
-// Extract tags from note content
+// Enhanced tag extraction for HTML format
 function extractNoteTags(content) {
     if (!content) return [];
     
     var tags = [];
-    var tagMatches = content.match(/#(dad|mom|jess)\b/gi);
     
-    if (tagMatches) {
-        tagMatches.forEach(function(tag) {
+    // Look for tags in paragraph tags: <p>#dad</p>
+    var paragraphTagMatches = content.match(/<p[^>]*>\s*#(dad|mom|jess)\s*<\/p>/gi);
+    if (paragraphTagMatches) {
+        paragraphTagMatches.forEach(function(match) {
+            var tagMatch = match.match(/#(dad|mom|jess)/i);
+            if (tagMatch) {
+                var cleanTag = tagMatch[1].toLowerCase();
+                if (!tags.includes(cleanTag)) {
+                    tags.push(cleanTag);
+                }
+            }
+        });
+    }
+    
+    // Also check for inline tags just in case
+    var inlineTagMatches = content.match(/#(dad|mom|jess)\b/gi);
+    if (inlineTagMatches) {
+        inlineTagMatches.forEach(function(tag) {
             var cleanTag = tag.toLowerCase().replace('#', '');
             if (!tags.includes(cleanTag)) {
                 tags.push(cleanTag);
@@ -440,6 +436,7 @@ function extractNoteTags(content) {
         });
     }
     
+    console.log('Extracted tags:', tags);
     return tags;
 }
 
