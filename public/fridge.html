@@ -883,6 +883,56 @@
             opacity: 0.8;
             background-color: rgba(76, 175, 80, 0.1) !important;
         }
+
+        /* Enhanced note header styling */
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #640D5F;
+        }
+        
+        .note-title {
+            color: #2c3e50 !important;
+            font-size: 1.6rem !important;
+            font-weight: 600 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+            flex-grow: 1;
+        }
+        
+        /* Update note-meta-right for the new header structure */
+        .note-header .note-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        /* Ensure completed notes have a green title underline */
+        .completed-note .note-header {
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .completed-note .note-title {
+            color: #2c3e50 !important;
+        }
+        
+        /* Remove the old note-meta styling since we're replacing it */
+        .note-meta {
+            display: none;
+        }
+        
+        /* Responsive title sizing */
+        @media (max-width: 768px) {
+            .note-title {
+                font-size: 1.4rem !important;
+            }
+        }
+        
     </style>
 </head>
 <body>
