@@ -288,7 +288,7 @@ function formatNoteContentWithCheckboxes(content) {
     return displayContent;
 }
 
-// Enhanced renderCurrentPage that preserves checkbox states
+// Enhanced renderCurrentPage with better headers and dynamic titles
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
     var startIndex = currentPage * notesPerPage;
@@ -325,9 +325,12 @@ function renderCurrentPage() {
                 completionBadge = '<span class="completion-badge">✓ Completed</span>';
             }
             
+            // Extract dynamic title from note content
+            var noteTitle = extractNoteTitle(note.content);
+            
             html += '<div class="' + noteClass + '">' +
-                '<div class="note-meta">' +
-                '<span class="note-sender">' + (note.sender || note.source || 'Unknown') + '</span>' +
+                '<div class="note-header">' +
+                '<h2 class="note-title">' + noteTitle + '</h2>' +
                 '<div class="note-meta-right">' +
                 completionBadge +
                 '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
@@ -339,6 +342,35 @@ function renderCurrentPage() {
         }
         notesContainer.innerHTML = html;
     }
+}
+// Extract dynamic title from note content
+function extractNoteTitle(content) {
+    if (!content) return 'Note from iPhone';
+    
+    // Try to find first heading (H1, H2, H3) in the content
+    var headingMatch = content.match(/<h[1-3][^>]*>([^<]+)<\/h[1-3]>/i);
+    if (headingMatch) {
+        return headingMatch[1].trim();
+    }
+    
+    // Try to find markdown-style heading
+    var markdownMatch = content.match(/^#+\s*(.+)$/m);
+    if (markdownMatch) {
+        return markdownMatch[1].trim();
+    }
+    
+    // Try to find a line that looks like a title (short line at the beginning)
+    var lines = content.replace(/<[^>]*>/g, '').split(/\n|<br>/);
+    var firstLine = lines[0];
+    if (firstLine && firstLine.trim().length > 0 && firstLine.trim().length < 50) {
+        // Check if it's not a checkbox item
+        if (!firstLine.match(/^\s*[\[\-\*]\s*/)) {
+            return firstLine.trim();
+        }
+    }
+    
+    // Default fallback
+    return 'Note from iPhone';
 }
 
 function updatePagination() {
