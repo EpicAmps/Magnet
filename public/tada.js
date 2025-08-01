@@ -168,7 +168,7 @@ function fetchNote() {
             return response.json();
         })
         .then(function(data) {
-            displayNotes(data); // Use new displayNotes function
+            displayNotes(data);
             updateConnectionStatus(true);
             lastManualCheck = Date.now();
         })
@@ -197,25 +197,30 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-// Debug version of displayNotes with extensive logging
+/ Simplified displayNotes without tab system for now
 function displayNotes(notesData) {
-    console.log('=== DISPLAY NOTES DEBUG ===');
-    console.log('Raw notesData:', notesData);
-    
     var notesContainer = document.getElementById('notesContainer');
     var paginationDiv = document.getElementById('pagination');
+    
+    console.log('displayNotes called with:', notesData);
     
     // Handle both old format (single note) and new format (multiple notes)
     if (notesData.notes && Array.isArray(notesData.notes)) {
         allNotes = notesData.notes;
     } else if (notesData.content) {
-        allNotes = [notesData]; // Convert old format
+        allNotes = [notesData];
     } else {
         allNotes = [];
     }
     
-    console.log('All notes loaded:', allNotes.length);
-    console.log('All notes array:', allNotes);
+    console.log('Total notes loaded:', allNotes.length);
+    
+    if (allNotes.length === 0) {
+        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
+        paginationDiv.style.display = 'none';
+        document.getElementById('statusText').textContent = '⏳ No notes yet';
+        return;
+    }
     
     // Check for completed notes and mark them
     for (let i = 0; i < allNotes.length; i++) {
@@ -225,64 +230,41 @@ function displayNotes(notesData) {
         }
     }
     
-    // Sort notes: incomplete first, then completed (by completion time)
+    // Sort notes
     allNotes.sort((a, b) => {
         if (a.completed && !b.completed) return 1;
         if (!a.completed && b.completed) return -1;
         if (a.completed && b.completed) {
             return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
         }
-        return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
+        return b.timestamp - a.timestamp;
     });
     
-    // Update tab counts - but only if the functions exist
-    if (typeof updateTabCounts === 'function') {
-        console.log('Updating tab counts...');
-        updateTabCounts();
-    } else {
-        console.log('updateTabCounts function not found - skipping tab system');
-    }
-    
-    if (allNotes.length === 0) {
-        console.log('No notes found, showing empty state');
-        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
-        paginationDiv.style.display = 'none';
-        document.getElementById('statusText').textContent = '⏳ No notes yet';
-        return;
-    }
-    
-    console.log('Calling renderCurrentPage...');
     renderCurrentPage();
     updatePagination();
     
-    // Update status - check if tab system exists
-    if (typeof updateStatusForTab === 'function') {
-        updateStatusForTab();
+    // Update status
+    var totalNotes = allNotes.length;
+    var completedNotes = allNotes.filter(note => note.completed).length;
+    var activeNotes = totalNotes - completedNotes;
+    var latestNote = allNotes[0];
+    
+    if (activeNotes > 0) {
+        document.getElementById('statusText').textContent = '📧 ' + activeNotes + ' active note' + 
+            (activeNotes > 1 ? 's' : '') + (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '') +
+            ' from ' + (latestNote.sender || 'someone');
     } else {
-        // Fallback to original status update
-        var totalNotes = allNotes.length;
-        var completedNotes = allNotes.filter(note => note.completed).length;
-        var activeNotes = totalNotes - completedNotes;
-        var latestNote = allNotes[0];
-        
-        if (activeNotes > 0) {
-            document.getElementById('statusText').textContent = '📧 ' + activeNotes + ' active note' + 
-                (activeNotes > 1 ? 's' : '') + (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '') +
-                ' from ' + (latestNote.sender || 'someone');
-        } else {
-            document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed!';
-        }
+        document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed!';
     }
     
     // Update timestamp
-    var latestNote = allNotes[0];
     document.getElementById('timestamp').textContent = 
         'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
     lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
 }
 
 
-/ Enhanced content formatter for HTML with disabled checkboxes
+// Fixed content formatter - no syntax errors
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -300,11 +282,8 @@ function formatNoteContentWithCheckboxes(content) {
     displayContent = displayContent.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
     // Enable the disabled checkboxes and make them clickable
-    displayContent = displayContent.replace(/<input\s+disabled[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox">');
-    displayContent = displayContent.replace(/<input\s+type="checkbox"\s+disabled[^>]*>/gi, '<input type="checkbox">');
-    
-    // Also handle any other variations
-    displayContent = displayContent.replace(/\s*disabled\s*=\s*["\'][^"\']*["\']|\s*disabled\s*/gi, '');
+    displayContent = displayContent.replace(/<input[^>]*disabled[^>]*type="checkbox"[^>]*>/gi, '<input type="checkbox">');
+    displayContent = displayContent.replace(/<input[^>]*type="checkbox"[^>]*disabled[^>]*>/gi, '<input type="checkbox">');
     
     // Remove empty paragraphs that might be left over
     displayContent = displayContent.replace(/<p[^>]*>\s*<\/p>/gi, '');
@@ -368,7 +347,7 @@ function renderCurrentPage() {
     notesContainer.innerHTML = html;
 }
 
-// Enhanced title extraction for HTML format
+// Fixed title extraction
 function extractAndCleanNoteTitle(content) {
     if (!content) return { title: 'Note from iPhone', content: content };
     
@@ -376,29 +355,22 @@ function extractAndCleanNoteTitle(content) {
     var extractedTitle = 'Note from iPhone';
     var cleanedContent = content;
     
-    console.log('=== TITLE EXTRACTION DEBUG ===');
-    console.log('Original content:', content);
-    
     // Remove the generic "Note from iPhone" h1 first
     cleanedContent = content.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
-    // Look for the first <p> tag after removing the generic title - this is likely our real title
+    // Look for the first <p> tag after removing the generic title
     var firstParagraphMatch = cleanedContent.match(/<p[^>]*>([^<]+)<\/p>/i);
     if (firstParagraphMatch) {
         var potentialTitle = firstParagraphMatch[1].trim();
         
-        // Make sure it's not a tag (starts with #) and is a reasonable length
+        // Make sure it's not a tag and is reasonable length
         if (!potentialTitle.match(/^#\w+/) && potentialTitle.length > 2 && potentialTitle.length < 80) {
             extractedTitle = potentialTitle;
-            // Remove this paragraph from the content
             cleanedContent = cleanedContent.replace(firstParagraphMatch[0], '').trim();
-            
-            console.log('Found paragraph title:', extractedTitle);
             return { title: extractedTitle, content: cleanedContent };
         }
     }
     
-    console.log('No custom title found, using default');
     return { title: 'Note from iPhone', content: cleanedContent };
 }
 
