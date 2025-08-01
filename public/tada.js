@@ -164,11 +164,27 @@ function fetchNoteViaPolling() {
 
 function fetchNote() {
     startCountdown(); 
+    console.log('=== FETCH NOTE DEBUG ===');
+    console.log('Fetching notes for fridgeId:', fridgeId);
+    
     fetch(API_BASE + '/api/note?fridgeId=' + fridgeId)
         .then(function(response) {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
             return response.json();
         })
         .then(function(data) {
+            console.log('=== RAW DATA RECEIVED ===');
+            console.log('Full response:', JSON.stringify(data, null, 2));
+            
+            if (data.notes && data.notes.length > 0) {
+                console.log('=== FIRST NOTE ANALYSIS ===');
+                console.log('First note content:', data.notes[0].content);
+                console.log('Content length:', data.notes[0].content?.length);
+                console.log('Contains checkboxes?', data.notes[0].content?.includes('checkbox'));
+                console.log('Contains input tags?', data.notes[0].content?.includes('<input'));
+            }
+            
             displayNotes(data);
             updateConnectionStatus(true);
             lastManualCheck = Date.now();
@@ -181,7 +197,6 @@ function fetchNote() {
             updateConnectionStatus(false);
         });
 }
-
 // Helper function to check if a note has all tasks completed (for initial load)
 function isNoteCompleted(note) {
     if (!note.content) return false;
@@ -198,12 +213,13 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-// Simplified displayNotes without tab system for now
+// Complete displayNotes function with debugging
 function displayNotes(notesData) {
+    console.log('=== DISPLAY NOTES DEBUG ===');
+    console.log('displayNotes called with:', notesData);
+    
     var notesContainer = document.getElementById('notesContainer');
     var paginationDiv = document.getElementById('pagination');
-    
-    console.log('displayNotes called with:', notesData);
     
     // Handle both old format (single note) and new format (multiple notes)
     if (notesData.notes && Array.isArray(notesData.notes)) {
@@ -215,7 +231,20 @@ function displayNotes(notesData) {
     }
     
     console.log('Total notes loaded:', allNotes.length);
-
+    
+    if (allNotes.length > 0) {
+        console.log('=== CONTENT ANALYSIS ===');
+        allNotes.forEach((note, index) => {
+            console.log(`Note ${index}:`, {
+                id: note.id,
+                timestamp: note.timestamp,
+                contentPreview: note.content?.substring(0, 200),
+                hasCheckboxes: note.content?.includes('checkbox'),
+                hasInputTags: note.content?.includes('<input')
+            });
+        });
+    }
+    
     // Update tab counts after loading notes
     updateTabCounts();
     
@@ -271,26 +300,25 @@ function displayNotes(notesData) {
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
+    console.log('=== FORMATTING CONTENT ===');
+    console.log('Original content:', content.substring(0, 300));
+    
     var displayContent = content;
     
-    // Remove iOS Shortcut attribution if present
-    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
-    displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
-    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
-    displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
-    displayContent = displayContent.replace(/<p[^>]*class="sender-attribution"[^>]*>.*?<\/p>/gi, '');
-    displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
+    // Just remove the disabled attribute - keep everything else intact
+    displayContent = displayContent.replace(/\s*disabled\s*/gi, ' ');
     
-    // Remove the generic "Note from iPhone" h1 if it exists
+    // Remove iOS attribution
+    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
+    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+    
+    // Remove the generic title
     displayContent = displayContent.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
     
-    // Remove empty paragraphs that might be left over
-    displayContent = displayContent.replace(/<p[^>]*>\s*<\/p>/gi, '');
-    
-    // Style tags nicely instead of removing them
+    // Style tags
     displayContent = displayContent.replace(/<p[^>]*>\s*(#(?:dad|mom|jess))\s*<\/p>/gi, '<div class="note-tag">$1</div>');
     
-    // DON'T modify checkboxes here - let the webhook handle it properly
+    console.log('Formatted content:', displayContent.substring(0, 300));
     
     return displayContent.trim();
 }
