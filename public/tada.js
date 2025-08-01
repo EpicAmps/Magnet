@@ -215,6 +215,9 @@ function displayNotes(notesData) {
     }
     
     console.log('Total notes loaded:', allNotes.length);
+
+    // Update tab counts after loading notes
+    updateTabCounts();
     
     if (allNotes.length === 0) {
         notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
@@ -265,7 +268,6 @@ function displayNotes(notesData) {
 }
 
 
-// Fixed content formatter - no syntax errors
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -289,8 +291,8 @@ function formatNoteContentWithCheckboxes(content) {
     // Remove empty paragraphs that might be left over
     displayContent = displayContent.replace(/<p[^>]*>\s*<\/p>/gi, '');
     
-    // Remove tags from display (they'll be handled by the tab system)
-    displayContent = displayContent.replace(/<p[^>]*>\s*#\w+\s*<\/p>/gi, '');
+    // KEEP TAGS IN DISPLAY - Style them nicely instead of removing them
+    displayContent = displayContent.replace(/<p[^>]*>\s*(#(?:dad|mom|jess))\s*<\/p>/gi, '<div class="note-tag">$1</div>');
     
     return displayContent.trim();
 }
