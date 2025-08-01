@@ -632,6 +632,197 @@
             color: #333;
             border-radius: 15px;
         }
+
+        /* CELEBRATION OVERLAY STYLES - Add this to your CSS */
+
+        #celebration-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        #celebration-overlay.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        #celebration-overlay.fade-out {
+            opacity: 0;
+            transform: scale(1.1);
+        }
+        
+        .celebration-content {
+            text-align: center;
+            color: white;
+            z-index: 2;
+        }
+        
+        .big-checkmark {
+            font-size: 8rem;
+            color: #4CAF50;
+            margin-bottom: 20px;
+            animation: checkmark-bounce 0.6s ease-out;
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
+        }
+        
+        .celebration-text {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            animation: text-pulse 0.8s ease-out 0.3s both;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .celebration-subtext {
+            font-size: 1.8rem;
+            opacity: 0.9;
+            animation: fade-in-up 0.6s ease-out 0.6s both;
+        }
+        
+        /* Checkmark bounce animation */
+        @keyframes checkmark-bounce {
+            0% {
+                transform: scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2) rotate(-10deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        
+        /* Text pulse animation */
+        @keyframes text-pulse {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Fade in up animation */
+        @keyframes fade-in-up {
+            0% {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Confetti container */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Confetti pieces */
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            top: -10px;
+            animation: confetti-fall linear forwards;
+        }
+        
+        .confetti-piece.square {
+            /* Square is default */
+        }
+        
+        .confetti-piece.circle {
+            border-radius: 50%;
+        }
+        
+        .confetti-piece.triangle {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 10px solid;
+            background: transparent !important;
+        }
+        
+        /* Confetti falling animation */
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Enhanced task completion styles */
+        .note-content input[type="checkbox"]:checked + *,
+        .note-item-content input[type="checkbox"]:checked + * {
+            text-decoration: line-through;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        /* Smooth checkbox animations */
+        .note-content input[type="checkbox"],
+        .note-item-content input[type="checkbox"] {
+            transition: transform 0.2s ease;
+        }
+        
+        .note-content input[type="checkbox"]:checked,
+        .note-item-content input[type="checkbox"]:checked {
+            transform: scale(1.1);
+        }
+        
+        /* Touch-friendly task interaction */
+        .note-content li:active,
+        .note-item-content li:active {
+            transform: scale(0.98);
+            transition: transform 0.1s ease;
+        }
+        
+        /* Responsive celebration for smaller screens */
+        @media (max-width: 768px) {
+            .big-checkmark {
+                font-size: 6rem;
+            }
+            
+            .celebration-text {
+                font-size: 3rem;
+            }
+            
+            .celebration-subtext {
+                font-size: 1.4rem;
+            }
+        }
     </style>
 </head>
 <body>
