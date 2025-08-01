@@ -933,6 +933,150 @@
                 font-size: 1.4rem !important;
             }
         }
+
+        /* Material Design Tabs */
+        .tabs-container {
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tabs {
+            display: flex;
+            position: relative;
+            background: none;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab {
+            flex: 1;
+            min-width: 0;
+            padding: 16px 20px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .tab:hover {
+            color: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .tab.active {
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Tab underline indicators with different colors */
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: transparent;
+            transition: all 0.3s ease;
+            transform: scaleX(0);
+            transform-origin: center;
+        }
+        
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+        
+        /* Different colors for each tab */
+        .tab[data-tab="all"].active::after {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .tab[data-tab="dad"].active::after {
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .tab[data-tab="mom"].active::after {
+            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+        }
+        
+        .tab[data-tab="jess"].active::after {
+            background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
+        }
+        
+        /* Ripple effect on tab click */
+        .tab {
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .tab:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        /* Badge styling for counts */
+        .tab .badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            min-width: 18px;
+            text-align: center;
+        }
+        
+        .tab.active .badge {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Responsive tabs */
+        @media (max-width: 768px) {
+            .tab {
+                padding: 14px 16px;
+                font-size: 0.85rem;
+            }
+            
+            .tab .badge {
+                font-size: 0.7rem;
+                padding: 1px 4px;
+                margin-left: 4px;
+            }
+        }
+        
+        /* Tab content area */
+        .tab-content {
+            margin-top: 20px;
+        }
         
     </style>
 </head>
