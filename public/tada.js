@@ -297,6 +297,8 @@ function displayNotes(notesData) {
 }
 
 
+// Replace your formatNoteContentWithCheckboxes function with this:
+
 function formatNoteContentWithCheckboxes(content) {
     if (!content) return 'Empty note';
     
@@ -305,12 +307,26 @@ function formatNoteContentWithCheckboxes(content) {
     
     var displayContent = content;
     
-    // Just remove the disabled attribute - keep everything else intact
+    // FIX THE BROKEN CHECKBOXES - these are missing type="checkbox"
+    // Pattern: <li><input > text</li> should become <li><input type="checkbox"> text</li>
+    displayContent = displayContent.replace(/<li><input\s*>/gi, '<li><input type="checkbox">');
+    
+    // Also handle any remaining malformed input tags in list items
+    displayContent = displayContent.replace(/<li><input([^>]*?)>/gi, function(match, attributes) {
+        // If it doesn't already have type="checkbox", add it
+        if (!attributes.includes('type=')) {
+            return '<li><input type="checkbox"' + attributes + '>';
+        }
+        return match;
+    });
+    
+    // Remove disabled attributes if any exist
     displayContent = displayContent.replace(/\s*disabled\s*/gi, ' ');
     
     // Remove iOS attribution
     displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
     displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<p[^>]*class="sender-attribution"[^>]*>.*?<\/p>/gi, '');
     
     // Remove the generic title
     displayContent = displayContent.replace(/<h1[^>]*>Note from iPhone<\/h1>\s*/gi, '');
