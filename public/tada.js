@@ -928,7 +928,7 @@ function initializeApp() {
         console.log('🚫 SSE disabled - using polling only');
         
         // DON'T connect to SSE since it's causing issues
-        // connectToNotifications(); // DISABLED AGAIN
+        connectToNotifications(); // DISABLED AGAIN
         
         startPollingBackup();
         fetchNote();
