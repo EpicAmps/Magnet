@@ -177,7 +177,23 @@ function fetchNote() {
         });
 }
 
-// NEW: Multiple notes display function
+// Helper function to check if a note has all tasks completed (for initial load)
+function isNoteCompleted(note) {
+    if (!note.content) return false;
+    
+    // Count checkboxes in the content
+    const content = note.content;
+    const checkboxMatches = content.match(/\[ \]/g) || []; // Unchecked boxes
+    const checkedBoxMatches = content.match(/\[x\]/gi) || []; // Checked boxes
+    
+    const totalBoxes = checkboxMatches.length + checkedBoxMatches.length;
+    
+    if (totalBoxes <= 1) return false; // Need at least 2 tasks
+    
+    return checkboxMatches.length === 0; // All boxes are checked
+}
+
+// Enhanced displayNotes to sort notes on initial load
 function displayNotes(notesData) {
     var notesContainer = document.getElementById('notesContainer');
     var paginationDiv = document.getElementById('pagination');
@@ -191,6 +207,24 @@ function displayNotes(notesData) {
         allNotes = [];
     }
     
+    // Check for completed notes and mark them
+    for (let i = 0; i < allNotes.length; i++) {
+        if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
+            allNotes[i].completed = true;
+            allNotes[i].completedAt = allNotes[i].completedAt || allNotes[i].timestamp;
+        }
+    }
+    
+    // Sort notes: incomplete first, then completed (by completion time)
+    allNotes.sort((a, b) => {
+        if (a.completed && !b.completed) return 1;
+        if (!a.completed && b.completed) return -1;
+        if (a.completed && b.completed) {
+            return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
+        }
+        return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
+    });
+    
     if (allNotes.length === 0) {
         notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
         paginationDiv.style.display = 'none';
@@ -201,11 +235,19 @@ function displayNotes(notesData) {
     renderCurrentPage();
     updatePagination();
     
-    // Update status
+    // Update status with completion info
     var totalNotes = allNotes.length;
-    var latestNote = allNotes[0];
-    document.getElementById('statusText').textContent = '📧 ' + totalNotes + ' note' + (totalNotes > 1 ? 's' : '') + 
-        ' from ' + (latestNote.sender || 'someone');
+    var completedNotes = allNotes.filter(note => note.completed).length;
+    var activeNotes = totalNotes - completedNotes;
+    var latestNote = allNotes.find(note => !note.completed) || allNotes[0];
+    
+    if (activeNotes > 0) {
+        document.getElementById('statusText').textContent = '📧 ' + activeNotes + ' active note' + 
+            (activeNotes > 1 ? 's' : '') + (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '') +
+            ' from ' + (latestNote.sender || 'someone');
+    } else {
+        document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed!';
+    }
     
     // Update timestamp
     document.getElementById('timestamp').textContent = 
@@ -213,6 +255,7 @@ function displayNotes(notesData) {
     lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
 }
 
+// Enhanced renderCurrentPage to visually distinguish completed notes
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
     var startIndex = currentPage * notesPerPage;
@@ -226,7 +269,12 @@ function renderCurrentPage() {
         var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(0, \'' + 
             (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
         
-        notesContainer.innerHTML = '<div class="note-content single-note-container">' + 
+        var containerClass = 'note-content single-note-container';
+        if (note.completed) {
+            containerClass += ' completed-note';
+        }
+        
+        notesContainer.innerHTML = '<div class="' + containerClass + '">' + 
             deleteBtn + content + '</div>';
     } else {
         // Multiple notes - use card layout with individual delete buttons
@@ -236,10 +284,19 @@ function renderCurrentPage() {
             var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(' + i + ', \'' + 
                 (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
             
-            html += '<div class="note-item">' +
+            var noteClass = 'note-item';
+            var completionBadge = '';
+            
+            if (note.completed) {
+                noteClass += ' completed-note';
+                completionBadge = '<span class="completion-badge">✓ Completed</span>';
+            }
+            
+            html += '<div class="' + noteClass + '">' +
                 '<div class="note-meta">' +
                 '<span class="note-sender">' + (note.sender || note.source || 'Unknown') + '</span>' +
                 '<div class="note-meta-right">' +
+                completionBadge +
                 '<span class="note-time">' + formatTime(note.timestamp) + '</span>' +
                 deleteBtn +
                 '</div>' +
@@ -458,22 +515,69 @@ function goToSetup() {
     window.location.href = '/setup.html';
 }
 
-// Simple task list interaction
-function setupTaskListInteraction() {
-    document.getElementById('notesContainer').addEventListener('click', function(event) {
-        var listItem = event.target.closest('li');
-        
-        if (listItem && listItem.querySelector('input[type="checkbox"]')) {
-            var checkbox = listItem.querySelector('input[type="checkbox"]');
-            
-            if (event.target.type !== 'checkbox') {
-                checkbox.checked = !checkbox.checked;
+// Find the index of a note from its DOM element
+function findNoteIndexFromElement(noteElement) {
+    // For single note view
+    if (noteElement.classList.contains('note-content')) {
+        return 0; // Single note is always index 0
+    }
+    
+    // For multiple notes, find the note-item index
+    if (noteElement.classList.contains('note-item')) {
+        const allNoteItems = document.querySelectorAll('.note-item');
+        for (let i = 0; i < allNoteItems.length; i++) {
+            if (allNoteItems[i] === noteElement) {
+                // Calculate the actual index in allNotes array
+                return (currentPage * notesPerPage) + i;
             }
-            
-            listItem.style.backgroundColor = checkbox.checked ? 
-                'rgba(46, 204, 113, 0.2)' : '';
         }
-    });
+    }
+    
+    return -1;
+}
+
+// Mark a note as completed and move it to the bottom
+function markNoteAsCompleted(noteIndex) {
+    if (noteIndex < 0 || noteIndex >= allNotes.length) return;
+    
+    const completedNote = allNotes[noteIndex];
+    
+    // Add completion metadata
+    completedNote.completed = true;
+    completedNote.completedAt = Date.now();
+    
+    // Remove from current position
+    allNotes.splice(noteIndex, 1);
+    
+    // Add to the end
+    allNotes.push(completedNote);
+    
+    console.log('📝 Moved completed note to bottom:', completedNote.id || completedNote.timestamp);
+    
+    // Adjust current page if needed (since we removed an item from the current view)
+    const totalPages = Math.ceil(allNotes.length / notesPerPage);
+    if (currentPage >= totalPages && currentPage > 0) {
+        currentPage = totalPages - 1;
+    }
+    
+    // Re-render with the new order
+    setTimeout(() => {
+        renderCurrentPage();
+        updatePagination();
+        
+        // Update status to reflect the reordering
+        const totalNotes = allNotes.length;
+        const completedNotes = allNotes.filter(note => note.completed).length;
+        const activeNotes = totalNotes - completedNotes;
+        
+        if (activeNotes > 0) {
+            document.getElementById('statusText').textContent = 
+                `📧 ${activeNotes} active, ${completedNotes} completed`;
+        } else {
+            document.getElementById('statusText').textContent = 
+                `🎉 All ${totalNotes} notes completed!`;
+        }
+    }, 100); // Small delay to let celebration start first
 }
 
 // Initialize when DOM is ready
@@ -493,8 +597,6 @@ function initializeApp() {
         startCountdown();
     }
 }
-
-
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
@@ -613,7 +715,7 @@ function triggerCelebration() {
     }, 3000);
 }
 
-// Check if all tasks are completed
+// Enhanced checkTaskCompletion function with card reordering
 function checkTaskCompletion(container) {
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     
@@ -624,8 +726,18 @@ function checkTaskCompletion(container) {
     const allCompleted = checkboxes.length === checkedBoxes.length;
     
     if (allCompleted) {
-        // Small delay to let the final checkbox animation complete
-        setTimeout(triggerCelebration, 300);
+        // Find which note this container belongs to
+        const noteElement = container.closest('.note-item, .note-content');
+        const noteIndex = findNoteIndexFromElement(noteElement);
+        
+        if (noteIndex !== -1) {
+            // Mark the note as completed and move to bottom
+            markNoteAsCompleted(noteIndex);
+            
+            // Small delay to let the final checkbox animation complete, then celebrate
+            setTimeout(triggerCelebration, 300);
+        }
+        
         return true;
     }
     
