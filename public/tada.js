@@ -255,7 +255,38 @@ function displayNotes(notesData) {
     lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
 }
 
-// Enhanced renderCurrentPage to visually distinguish completed notes
+// Enhanced content formatter that properly handles checkboxes
+function formatNoteContentWithCheckboxes(content) {
+    if (!content) return 'Empty note';
+    
+    var displayContent = content;
+    
+    // Remove iOS Shortcut attribution if present
+    displayContent = displayContent.replace(/— iOS Shortcut$/gim, '');
+    displayContent = displayContent.replace(/- iOS Shortcut$/gim, '');
+    displayContent = displayContent.replace(/<p[^>]*>— iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<p[^>]*>- iOS Shortcut<\/p>/gi, '');
+    displayContent = displayContent.replace(/<div[^>]*class="sender-attribution"[^>]*>.*?<\/div>/gi, '');
+    
+    // Handle HTML content (from markdown)
+    if (displayContent.includes('<') && displayContent.includes('>')) {
+        // If it's HTML, convert markdown checkboxes to actual HTML checkboxes
+        displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked>');
+        displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
+        return displayContent;
+    }
+    
+    // Handle plain text - convert markdown checkboxes to HTML checkboxes
+    displayContent = displayContent.replace(/\[x\]/gi, '<input type="checkbox" checked>');
+    displayContent = displayContent.replace(/\[ \]/g, '<input type="checkbox">');
+    
+    // Convert line breaks to HTML
+    displayContent = displayContent.replace(/\n/g, '<br>');
+    
+    return displayContent;
+}
+
+// Enhanced renderCurrentPage that preserves checkbox states
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
     var startIndex = currentPage * notesPerPage;
@@ -265,7 +296,7 @@ function renderCurrentPage() {
     if (currentNotes.length === 1 && allNotes.length === 1) {
         // Single note - use full-width display with delete button
         var note = currentNotes[0];
-        var content = formatNoteContent(note.content);
+        var content = formatNoteContentWithCheckboxes(note.content);
         var deleteBtn = '<button class="individual-delete-btn" onclick="deleteIndividualNote(0, \'' + 
             (note.id || note.timestamp) + '\')" title="Delete this note">×</button>';
         
@@ -301,7 +332,7 @@ function renderCurrentPage() {
                 deleteBtn +
                 '</div>' +
                 '</div>' +
-                '<div class="note-item-content">' + formatNoteContent(note.content) + '</div>' +
+                '<div class="note-item-content">' + formatNoteContentWithCheckboxes(note.content) + '</div>' +
                 '</div>';
         }
         notesContainer.innerHTML = html;
@@ -536,7 +567,51 @@ function findNoteIndexFromElement(noteElement) {
     return -1;
 }
 
-// Mark a note as completed and move it to the bottom
+// Update checkbox state in the actual note data
+function updateCheckboxInNoteData(checkbox) {
+    // Find which note this checkbox belongs to
+    var noteElement = checkbox.closest('.note-item, .note-content');
+    var noteIndex = findNoteIndexFromElement(noteElement);
+    
+    if (noteIndex === -1 || !allNotes[noteIndex]) return;
+    
+    var note = allNotes[noteIndex];
+    if (!note.content) return;
+    
+    // Find all checkboxes in this note's container
+    var allCheckboxes = noteElement.querySelectorAll('input[type="checkbox"]');
+    var checkboxIndex = Array.from(allCheckboxes).indexOf(checkbox);
+    
+    if (checkboxIndex === -1) return;
+    
+    // Update the note content to reflect the new checkbox state
+    var content = note.content;
+    var checkboxMatches = [];
+    var regex = /\[[x ]\]/gi;
+    var match;
+    var currentIndex = 0;
+    
+    // Find all checkbox patterns and update the specific one
+    var updatedContent = content.replace(regex, function(matchedText, offset) {
+        if (currentIndex === checkboxIndex) {
+            currentIndex++;
+            return checkbox.checked ? '[x]' : '[ ]';
+        }
+        currentIndex++;
+        return matchedText;
+    });
+    
+    // Update the note data
+    allNotes[noteIndex].content = updatedContent;
+    
+    console.log('Updated checkbox state in note data:', {
+        noteIndex,
+        checkboxIndex,
+        checked: checkbox.checked
+    });
+}
+
+// Modified markNoteAsCompleted to prevent re-rendering during celebration
 function markNoteAsCompleted(noteIndex) {
     if (noteIndex < 0 || noteIndex >= allNotes.length) return;
     
@@ -560,7 +635,8 @@ function markNoteAsCompleted(noteIndex) {
         currentPage = totalPages - 1;
     }
     
-    // Re-render with the new order
+    // Don't re-render immediately - let celebration play first
+    // Re-render will happen after celebration is complete
     setTimeout(() => {
         renderCurrentPage();
         updatePagination();
@@ -577,7 +653,7 @@ function markNoteAsCompleted(noteIndex) {
             document.getElementById('statusText').textContent = 
                 `🎉 All ${totalNotes} notes completed!`;
         }
-    }, 100); // Small delay to let celebration start first
+    }, 3500); // Wait for celebration to finish (3000ms + buffer)
 }
 
 // Initialize when DOM is ready
@@ -744,8 +820,7 @@ function checkTaskCompletion(container) {
     return false;
 }
 
-
-// Enhanced task list interaction with resurrection logic!
+// Enhanced task list interaction with proper checkbox handling
 function setupTaskListInteraction() {
     document.getElementById('notesContainer').addEventListener('click', function(event) {
         var listItem = event.target.closest('li');
@@ -754,9 +829,13 @@ function setupTaskListInteraction() {
             var checkbox = listItem.querySelector('input[type="checkbox"]');
             var wasChecked = checkbox.checked;
             
+            // Only toggle if we didn't click directly on the checkbox
             if (event.target.type !== 'checkbox') {
                 checkbox.checked = !checkbox.checked;
             }
+            
+            // Update checkbox state in the data model immediately
+            updateCheckboxInNoteData(checkbox);
             
             // Visual feedback for checked state
             listItem.style.backgroundColor = checkbox.checked ? 
@@ -773,10 +852,10 @@ function setupTaskListInteraction() {
                 }
             }
             
-            // Find the parent container (could be note-content or note-item-content)
+            // Find the parent container
             var noteContainer = listItem.closest('.note-content, .note-item-content');
             if (noteContainer) {
-                // Check for completion only if we just checked a box (not unchecked)
+                // Check for completion only if we just checked a box
                 if (checkbox.checked && !wasChecked) {
                     checkTaskCompletion(noteContainer);
                 }
