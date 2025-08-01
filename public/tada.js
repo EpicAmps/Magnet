@@ -197,58 +197,89 @@ function isNoteCompleted(note) {
     return checkboxMatches.length === 0; // All boxes are checked
 }
 
-    // Enhanced displayNotes with tab support
-    function displayNotes(notesData) {
-        var notesContainer = document.getElementById('notesContainer');
-        var paginationDiv = document.getElementById('pagination');
-        
-        // Handle both old format (single note) and new format (multiple notes)
-        if (notesData.notes && Array.isArray(notesData.notes)) {
-            allNotes = notesData.notes;
-        } else if (notesData.content) {
-            allNotes = [notesData]; // Convert old format
-        } else {
-            allNotes = [];
-        }
-        
-        // Check for completed notes and mark them
-        for (let i = 0; i < allNotes.length; i++) {
-            if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
-                allNotes[i].completed = true;
-                allNotes[i].completedAt = allNotes[i].completedAt || allNotes[i].timestamp;
-            }
-        }
-        
-        // Sort notes: incomplete first, then completed (by completion time)
-        allNotes.sort((a, b) => {
-            if (a.completed && !b.completed) return 1;
-            if (!a.completed && b.completed) return -1;
-            if (a.completed && b.completed) {
-                return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
-            }
-            return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
-        });
-        
-        // Update tab counts
-        updateTabCounts();
-        
-        if (allNotes.length === 0) {
-            notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
-            paginationDiv.style.display = 'none';
-            document.getElementById('statusText').textContent = '⏳ No notes yet';
-            return;
-        }
-        
-        renderCurrentPage();
-        updatePagination();
-        updateStatusForTab();
-        
-        // Update timestamp with latest note
-        var latestNote = allNotes[0];
-        document.getElementById('timestamp').textContent = 
-            'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
-        lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
+    // Debug version of displayNotes with extensive logging
+function displayNotes(notesData) {
+    console.log('=== DISPLAY NOTES DEBUG ===');
+    console.log('Raw notesData:', notesData);
+    
+    var notesContainer = document.getElementById('notesContainer');
+    var paginationDiv = document.getElementById('pagination');
+    
+    // Handle both old format (single note) and new format (multiple notes)
+    if (notesData.notes && Array.isArray(notesData.notes)) {
+        allNotes = notesData.notes;
+    } else if (notesData.content) {
+        allNotes = [notesData]; // Convert old format
+    } else {
+        allNotes = [];
     }
+    
+    console.log('All notes loaded:', allNotes.length);
+    console.log('All notes array:', allNotes);
+    
+    // Check for completed notes and mark them
+    for (let i = 0; i < allNotes.length; i++) {
+        if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
+            allNotes[i].completed = true;
+            allNotes[i].completedAt = allNotes[i].completedAt || allNotes[i].timestamp;
+        }
+    }
+    
+    // Sort notes: incomplete first, then completed (by completion time)
+    allNotes.sort((a, b) => {
+        if (a.completed && !b.completed) return 1;
+        if (!a.completed && b.completed) return -1;
+        if (a.completed && b.completed) {
+            return (b.completedAt || b.timestamp) - (a.completedAt || a.timestamp);
+        }
+        return b.timestamp - a.timestamp; // Normal timestamp sort for incomplete
+    });
+    
+    // Update tab counts - but only if the functions exist
+    if (typeof updateTabCounts === 'function') {
+        console.log('Updating tab counts...');
+        updateTabCounts();
+    } else {
+        console.log('updateTabCounts function not found - skipping tab system');
+    }
+    
+    if (allNotes.length === 0) {
+        console.log('No notes found, showing empty state');
+        notesContainer.innerHTML = '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
+        paginationDiv.style.display = 'none';
+        document.getElementById('statusText').textContent = '⏳ No notes yet';
+        return;
+    }
+    
+    console.log('Calling renderCurrentPage...');
+    renderCurrentPage();
+    updatePagination();
+    
+    // Update status - check if tab system exists
+    if (typeof updateStatusForTab === 'function') {
+        updateStatusForTab();
+    } else {
+        // Fallback to original status update
+        var totalNotes = allNotes.length;
+        var completedNotes = allNotes.filter(note => note.completed).length;
+        var activeNotes = totalNotes - completedNotes;
+        var latestNote = allNotes[0];
+        
+        if (activeNotes > 0) {
+            document.getElementById('statusText').textContent = '📧 ' + activeNotes + ' active note' + 
+                (activeNotes > 1 ? 's' : '') + (completedNotes > 0 ? ', ' + completedNotes + ' completed' : '') +
+                ' from ' + (latestNote.sender || 'someone');
+        } else {
+            document.getElementById('statusText').textContent = '🎉 All ' + totalNotes + ' notes completed!';
+        }
+    }
+    
+    // Update timestamp
+    var latestNote = allNotes[0];
+    document.getElementById('timestamp').textContent = 
+        'Last updated: ' + new Date(latestNote.timestamp).toLocaleString();
+    lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
+}
 
 
 / Enhanced content formatter for HTML with disabled checkboxes
