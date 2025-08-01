@@ -744,7 +744,8 @@ function checkTaskCompletion(container) {
     return false;
 }
 
-// Enhanced task list interaction with celebration
+
+// Enhanced task list interaction with resurrection logic!
 function setupTaskListInteraction() {
     document.getElementById('notesContainer').addEventListener('click', function(event) {
         var listItem = event.target.closest('li');
@@ -772,14 +773,107 @@ function setupTaskListInteraction() {
                 }
             }
             
-            // Check for completion only if we just checked a box (not unchecked)
-            if (checkbox.checked && !wasChecked) {
-                // Find the parent container (could be note-content or note-item-content)
-                var noteContainer = listItem.closest('.note-content, .note-item-content');
-                if (noteContainer) {
+            // Find the parent container (could be note-content or note-item-content)
+            var noteContainer = listItem.closest('.note-content, .note-item-content');
+            if (noteContainer) {
+                // Check for completion only if we just checked a box (not unchecked)
+                if (checkbox.checked && !wasChecked) {
                     checkTaskCompletion(noteContainer);
+                }
+                // Check for resurrection if we just unchecked a box
+                else if (!checkbox.checked && wasChecked) {
+                    checkTaskResurrection(noteContainer);
                 }
             }
         }
     });
+}
+
+// Check if all tasks are now UNchecked (resurrection!)
+function checkTaskResurrection(container) {
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    
+    if (checkboxes.length === 0) return false; // No checkboxes
+    
+    const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
+    const allUnchecked = checkedBoxes.length === 0;
+    
+    if (allUnchecked) {
+        // Find which note this container belongs to
+        const noteElement = container.closest('.note-item, .note-content');
+        const noteIndex = findNoteIndexFromElement(noteElement);
+        
+        if (noteIndex !== -1) {
+            const note = allNotes[noteIndex];
+            
+            // Only resurrect if it was previously completed
+            if (note.completed) {
+                console.log('🧟 Resurrecting note from the dead!');
+                resurrectNote(noteIndex);
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
+// Resurrect a note by moving it back to active status and top of list
+function resurrectNote(noteIndex) {
+    if (noteIndex < 0 || noteIndex >= allNotes.length) return;
+    
+    const resurrectedNote = allNotes[noteIndex];
+    
+    // Remove completion metadata
+    resurrectedNote.completed = false;
+    delete resurrectedNote.completedAt;
+    
+    // Remove from current position
+    allNotes.splice(noteIndex, 1);
+    
+    // Find where to insert it (after other active notes, before completed ones)
+    let insertIndex = 0;
+    for (let i = 0; i < allNotes.length; i++) {
+        if (allNotes[i].completed) {
+            insertIndex = i;
+            break;
+        }
+        insertIndex = i + 1;
+    }
+    
+    // Add back to active section
+    allNotes.splice(insertIndex, 0, resurrectedNote);
+    
+    console.log('📝 Resurrected note moved back to active:', resurrectedNote.id || resurrectedNote.timestamp);
+    
+    // Adjust current page if needed
+    const totalPages = Math.ceil(allNotes.length / notesPerPage);
+    if (currentPage >= totalPages && currentPage > 0) {
+        currentPage = Math.max(0, totalPages - 1);
+    }
+    
+    // Re-render with the new order
+    setTimeout(() => {
+        renderCurrentPage();
+        updatePagination();
+        
+        // Update status to reflect the resurrection
+        const totalNotes = allNotes.length;
+        const completedNotes = allNotes.filter(note => note.completed).length;
+        const activeNotes = totalNotes - completedNotes;
+        
+        document.getElementById('statusText').textContent = 
+            `📧 ${activeNotes} active` + (completedNotes > 0 ? `, ${completedNotes} completed` : '') + ' • Note resurrected! 🧟';
+        
+        // Clear the resurrection message after a few seconds
+        setTimeout(() => {
+            if (activeNotes > 0) {
+                document.getElementById('statusText').textContent = 
+                    `📧 ${activeNotes} active` + (completedNotes > 0 ? `, ${completedNotes} completed` : '');
+            } else {
+                document.getElementById('statusText').textContent = 
+                    `🎉 All ${totalNotes} notes completed!`;
+            }
+        }, 3000);
+    }, 100);
 }
