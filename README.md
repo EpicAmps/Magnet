@@ -8,15 +8,15 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 ## 🎯 How It Works
 
 **Simple 3-Step Process:**
-1. **Setup:** Visit your fridge's web browser, enter your Fridge's name (Ie "Kitchen" or whatever you named it when you first ran the Samsung setup wizard.)
-2. **Get Shortcut:** Receive a custom iOS Shortcut via email for your specific fridge
-3. **Send Notes:** Share any note via iOS Shortcuts - they appear directly on your fridge!
+1. **Setup:** Visit your fridge's web browser, enter your Samsung fridge's name (hint, you gave it a name during the Samsung setup)
+2. **Scan QR Code:** QR code appears with custom iOS Shortcut - scan with your phone
+3. **Add Shortcut:** iOS prompts to add shortcut - tap "Add" and start sharing notes!
 
 **Universal Compatibility:**
-- ✅ **iOS Shortcuts:** Native integration with iPhone/iPad Share Sheet
-- ✅ **Direct Processing:** No email middleman - shortcuts send directly to your fridge
+- ✅ **One-Scan Setup:** QR code installs shortcut directly to your iPhone
+- ✅ **Direct Processing:** Shortcuts send notes straight to your specific fridge
 - ✅ **Rich Features:** Checkboxes, task completion, family tags (`#dad`, `#mom`, `#jess`)
-- ✅ **No apps to install** - just use iOS Shortcuts!
+- ✅ **No apps to install** - just scan and go!
 
 ---
 
@@ -33,11 +33,10 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 
 ### Shortcut Generation Flow
 
-1. **🔧 Fridge Setup:** User enters fridge name on setup page
-2. **📤 Pipedream Trigger:** Vercel calls Pipedream workflow with fridge details
-3. **⚙️ Shortcut Creation:** Pipedream generates custom iOS Shortcut with unique webhook URL
-4. **📧 Email Delivery:** Pipedream emails the shortcut file to user for installation
-5. **📱 One-Tap Install:** User downloads and installs personalized shortcut
+1. **🔧 Fridge Setup:** User enters their Samsung fridge's existing name (from Samsung setup)
+2. **📱 QR Code Generation:** Vercel creates QR code containing custom iOS Shortcut URL
+3. **📲 Direct Install:** Scan QR code → iOS prompts "Add Shortcut?" → Tap "Add"
+4. **✅ Instant Setup:** Shortcut appears in Share Sheet immediately, no email needed
 
 ### Smart Features in Action
 
@@ -98,9 +97,9 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 - **Dynamic Blob Keys:** Handles Vercel's changing blob URL system
 
 ### External Integrations
-- **Pipedream:** Serverless shortcut generation and email delivery
-- **iOS Shortcuts:** Native iOS integration for seamless note sending
+- **iOS Shortcuts:** Direct QR code installation and native Share Sheet integration
 - **Vercel Blob:** Persistent storage with automatic cleanup and versioning
+- **Samsung Tizen:** Optimized for Family Hub browser environment
 
 ---
 
@@ -145,8 +144,8 @@ magnet/
 - **`setup.html`** - Initial configuration, generates unique fridge ID and email address
 
 #### iOS Integration
-- **`generate-shortcut.js`** - Triggers Pipedream workflow to create custom iOS Shortcuts
-- **`send-shortcut-email.js`** - Called by Pipedream to email generated shortcut to user
+- **`generate-shortcut.js`** - Creates custom iOS Shortcut URLs based on fridge names
+- **`shortcut-config.js`** - Template configuration for iOS Shortcuts generation
 
 ---
 
@@ -156,27 +155,23 @@ magnet/
 
 1. **Open Samsung Smart Fridge browser**
 2. **Navigate to:** `https://magnet-mu.vercel.app/setup`
-3. **Enter fridge name:** (e.g., "Kitchen", "Coolio")
-4. **Save your info:**
-   - 📧 Email: `incoming.magnet+yourname@gmail.com`
-   - 🆔 Fridge ID: `fridge_abc123`
-   - 📱 QR Code for iOS Shortcut
+3. **Enter your fridge's Samsung name:** (the name you gave it during Samsung setup)
+4. **Save your fridge info and get QR code**
 5. **Bookmark fridge page:** `https://magnet-mu.vercel.app/fridge?id=your_id`
 
 ### For iOS Users
 
-1. **Scan QR code** on fridge setup page (triggers Pipedream shortcut generation)
-2. **Check your email** for the custom "Send to Magnet" shortcut
-3. **Download and install** the shortcut on your iPhone/iPad
-4. **Grant permissions** for web access
-5. **Test:** Share any note → "Send to Magnet"
-6. **Watch it appear** on fridge within 15 seconds!
+1. **Scan QR code** displayed on fridge setup page
+2. **iOS prompts:** "Add 'Send to Magnet' Shortcut?"
+3. **Tap "Add"** - shortcut installs immediately
+4. **Test:** Share any note from Notes app → "Send to Magnet"
+5. **Watch it appear** on fridge within 15 seconds!
 
 ### For Other Devices
 
 1. **Use the web interface:** Visit your fridge's URL from any device
 2. **Manual entry:** Type notes directly in the web interface
-3. **Future:** Email support may be added back as an alternative method
+3. **Future:** Additional methods may be added for non-iOS devices
 
 ---
 
