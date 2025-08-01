@@ -288,7 +288,7 @@ function formatNoteContentWithCheckboxes(content) {
     return displayContent;
 }
 
-// Enhanced renderCurrentPage with better headers and dynamic titles
+// Enhanced renderCurrentPage with no duplicate titles
 function renderCurrentPage() {
     var notesContainer = document.getElementById('notesContainer');
     var startIndex = currentPage * notesPerPage;
@@ -325,8 +325,10 @@ function renderCurrentPage() {
                 completionBadge = '<span class="completion-badge">✓ Completed</span>';
             }
             
-            // Extract dynamic title from note content
-            var noteTitle = extractNoteTitle(note.content);
+            // Extract dynamic title from note content and get cleaned content
+            var titleData = extractAndCleanNoteTitle(note.content);
+            var noteTitle = titleData.title;
+            var cleanedContent = titleData.content;
             
             html += '<div class="' + noteClass + '">' +
                 '<div class="note-header">' +
@@ -337,40 +339,58 @@ function renderCurrentPage() {
                 deleteBtn +
                 '</div>' +
                 '</div>' +
-                '<div class="note-item-content">' + formatNoteContentWithCheckboxes(note.content) + '</div>' +
+                '<div class="note-item-content">' + formatNoteContentWithCheckboxes(cleanedContent) + '</div>' +
                 '</div>';
         }
         notesContainer.innerHTML = html;
     }
 }
-// Extract dynamic title from note content
-function extractNoteTitle(content) {
-    if (!content) return 'Note from iPhone';
+
+// Extract title and return cleaned content without the title
+function extractAndCleanNoteTitle(content) {
+    if (!content) return { title: 'Note from iPhone', content: content };
     
-    // Try to find first heading (H1, H2, H3) in the content
-    var headingMatch = content.match(/<h[1-3][^>]*>([^<]+)<\/h[1-3]>/i);
+    var originalContent = content;
+    var extractedTitle = 'Note from iPhone';
+    var cleanedContent = content;
+    
+    // Try to find first HTML heading (H1, H2, H3) and remove it
+    var headingMatch = content.match(/(<h[1-3][^>]*>)([^<]+)(<\/h[1-3]>)/i);
     if (headingMatch) {
-        return headingMatch[1].trim();
+        extractedTitle = headingMatch[2].trim();
+        cleanedContent = content.replace(headingMatch[0], '').trim();
+        return { title: extractedTitle, content: cleanedContent };
     }
     
-    // Try to find markdown-style heading
-    var markdownMatch = content.match(/^#+\s*(.+)$/m);
+    // Try to find markdown-style heading and remove it
+    var markdownMatch = content.match(/^(#+\s*)(.+)$/m);
     if (markdownMatch) {
-        return markdownMatch[1].trim();
+        extractedTitle = markdownMatch[2].trim();
+        cleanedContent = content.replace(markdownMatch[0], '').replace(/^\n+/, '').trim();
+        return { title: extractedTitle, content: cleanedContent };
     }
     
-    // Try to find a line that looks like a title (short line at the beginning)
-    var lines = content.replace(/<[^>]*>/g, '').split(/\n|<br>/);
+    // Try to find a title-like first line and remove it
+    var lines = content.replace(/<[^>]*>/g, '').split(/\n|<br\s*\/?>/i);
     var firstLine = lines[0];
     if (firstLine && firstLine.trim().length > 0 && firstLine.trim().length < 50) {
-        // Check if it's not a checkbox item
-        if (!firstLine.match(/^\s*[\[\-\*]\s*/)) {
-            return firstLine.trim();
+        // Check if it's not a checkbox item or list item
+        if (!firstLine.match(/^\s*[\[\-\*•]\s*/)) {
+            extractedTitle = firstLine.trim();
+            // Remove the first line from content
+            if (content.includes('<br>')) {
+                cleanedContent = content.replace(new RegExp('^[^<]*<br\\s*/?>', 'i'), '').trim();
+            } else {
+                var contentLines = content.split('\n');
+                contentLines.shift(); // Remove first line
+                cleanedContent = contentLines.join('\n').trim();
+            }
+            return { title: extractedTitle, content: cleanedContent };
         }
     }
     
-    // Default fallback
-    return 'Note from iPhone';
+    // Default fallback - no title found, return original content
+    return { title: 'Note from iPhone', content: originalContent };
 }
 
 function updatePagination() {
