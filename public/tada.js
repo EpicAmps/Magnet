@@ -1396,6 +1396,49 @@ console.log(
   "🔧 Run testGlobalFunctions() to verify onclick handlers will work",
 );
 
+function debugDeleteRequest(noteIndex, noteId) {
+  console.log("=== DELETE REQUEST DEBUG ===");
+
+  const noteToDelete = allNotes[noteIndex];
+  console.log("Note to delete:", noteToDelete);
+
+  const requestBody = {
+    fridgeId: fridgeId,
+    noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
+    deleteAll: false,
+  };
+
+  console.log("Request body:", JSON.stringify(requestBody, null, 2));
+  console.log("API URL:", API_BASE + "/api/note");
+  console.log("Method: DELETE");
+
+  // Test the actual request
+  fetch(API_BASE + "/api/note", {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  })
+    .then((response) => {
+      console.log("Delete response status:", response.status);
+      console.log("Delete response ok:", response.ok);
+      return response.text(); // Get raw response
+    })
+    .then((text) => {
+      console.log("Delete response body:", text);
+      try {
+        const json = JSON.parse(text);
+        console.log("Parsed response:", json);
+      } catch (e) {
+        console.log("Response is not JSON");
+      }
+    })
+    .catch((error) => {
+      console.error("Delete request failed:", error);
+    });
+}
+
 // CRITICAL: Make functions globally available for onclick handlers
 window.deleteNote = deleteNote;
 window.deleteIndividualNote = deleteIndividualNote;
@@ -1404,18 +1447,14 @@ window.changePage = changePage;
 window.goToSetup = goToSetup;
 window.toggleInfo = toggleInfo;
 window.fetchNote = fetchNote;
-
-// Make test function available
-window.testDeleteFunctions = testDeleteFunctions;
-console.log("🔧 Added testDeleteFunctions() to console");
-
-// Make debug function available in console
+window.debugDeleteRequest = debugDeleteRequest;
 window.debugCheckboxStates = debugCheckboxStates;
-console.log("🔧 Added debugCheckboxStates() function to console");
-
-// Make test functions available in console
+window.testDeleteFunctions = testDeleteFunctions;
 window.testCheckboxFix = testCheckboxFix;
 window.testManualRefresh = testManualRefresh;
+
+console.log("🔧 Added testDeleteFunctions() to console");
+console.log("🔧 Added debugCheckboxStates() function to console");
 console.log(
   "🔧 Debug functions available: testCheckboxFix(), testManualRefresh()",
 );
