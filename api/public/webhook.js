@@ -51,19 +51,35 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body; // Define body first
+    const body = req.body;
 
-    console.log("=== FULL REQUEST BODY ==="); // Then log it
+    console.log("=== FULL REQUEST BODY ===");
     console.log(JSON.stringify(body, null, 2));
 
-    let fridgeId = body.fridgeId || body.fridge_id || body.id;
+    // Extract fridge info from email address
+    let fridgeId, fridgeName;
 
-    let noteContent = body.content || body.text || body.body || "";
-    let fridgeName =
-      body.fridgeName || body.fridge_name || body.name || "unknown";
+    if (body.to) {
+      // Parse: incoming.magnet+coolio@gmail.com → fridgeName = "coolio"
+      const emailMatch = body.to.match(/incoming\.magnet\+([^@]+)@/);
+      if (emailMatch) {
+        fridgeName = emailMatch[1].toLowerCase(); // "coolio"
+        fridgeId = generateFridgeId(fridgeName); // Convert to consistent ID
+      }
+    }
 
-    console.log("Extracted:", { fridgeId, fridgeName });
+    // Fallback to direct fields if available
+    fridgeId = fridgeId || body.fridgeId || body.fridge_id || body.id;
+    fridgeName =
+      fridgeName ||
+      body.fridgeName ||
+      body.fridge_name ||
+      body.name ||
+      "unknown";
 
+    let noteContent = body.body || body.content || body.text || "";
+
+    console.log("Extracted:", { fridgeId, fridgeName, email: body.to });
     console.log("Received note:", {
       fridgeId,
       fridgeName,
@@ -106,6 +122,18 @@ export default async function handler(req, res) {
         return match;
       },
     );
+
+    // Generate consistent fridge ID from name
+    function generateFridgeId(fridgeName) {
+      let hash = 0;
+      const str = fridgeName.toLowerCase().trim();
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash;
+      }
+      return "fridge_" + Math.abs(hash).toString(36);
+    }
 
     // Extract tags
     const tags = extractTags(formattedContent);
