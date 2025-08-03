@@ -1,4 +1,4 @@
-// api/note.js - Firebase version
+// api/note.js - Clean Firebase version WITHOUT frontend code
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -25,6 +25,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 export default async function handler(req, res) {
+  console.log("=== NOTE API REQUEST ===");
+  console.log("Method:", req.method);
+  console.log("Query:", req.query);
+
   // Allow CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS");
@@ -43,13 +47,34 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      // ... your existing GET logic ...
+      console.log("GET request for fridgeId:", fridgeId);
+
+      const notesQuery = query(
+        collection(db, "notes"),
+        where("fridgeId", "==", fridgeId),
+        orderBy("timestamp", "desc"),
+      );
+
+      const snapshot = await getDocs(notesQuery);
+      const notes = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp.toMillis(), // Convert Firestore timestamp
+      }));
+
+      console.log(`Retrieved ${notes.length} notes for fridge: ${fridgeId}`);
+
+      return res.status(200).json({
+        notes,
+        lastUpdated: Date.now(),
+        fridgeId,
+        total: notes.length,
+      });
     } else if (req.method === "DELETE") {
       console.log("DELETE request received");
       console.log("Request body:", req.body);
-      console.log("fridgeId from query:", fridgeId);
 
-      // CRITICAL: Parse the request body properly
+      // Parse the request body properly
       let body = req.body;
       if (typeof body === "string") {
         try {
@@ -154,37 +179,5 @@ export default async function handler(req, res) {
   }
 }
 
-function testDeleteAllRequest() {
-  console.log("=== TESTING DELETE ALL REQUEST ===");
-
-  const requestBody = {
-    fridgeId: fridgeId,
-    deleteAll: true,
-  };
-
-  console.log("Sending request:", requestBody);
-
-  fetch(API_BASE + "/api/note", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  })
-    .then((response) => {
-      console.log("Response status:", response.status);
-      return response.text();
-    })
-    .then((text) => {
-      console.log("Response body:", text);
-    })
-    .catch((error) => {
-      console.error("Request failed:", error);
-    });
-}
-
-window.testDeleteAllRequest = testDeleteAllRequest;
-
-console.log("🔧 Debug functions available:");
-console.log("  - debugDeleteRequest(noteIndex, noteId)");
-console.log("  - testDeleteAllRequest()");
+// IMPORTANT: DO NOT ADD ANY FRONTEND CODE BELOW THIS LINE
+// No window.* functions, no DOM code, no frontend debug functions!
