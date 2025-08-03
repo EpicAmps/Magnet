@@ -1,4 +1,3 @@
-// api/webhook.js - Firebase version with checkbox fix
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -13,88 +12,107 @@ import {
 } from "firebase/firestore";
 import { marked } from "marked";
 
-// Configure marked for fridge-friendly output
+// Configure marked
 marked.setOptions({
   breaks: true,
   gfm: true,
   sanitize: false,
 });
 
-// Initialize Firebase
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
-};
+console.log('=== WEBHOOK STARTUP ===');
+console.log('Environment check:', {
+  hasApiKey: !!process.env.FIREBASE_API_KEY,
+  hasAuthDomain: !!process.env.FIREBASE_AUTH_DOMAIN,
+  hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+  projectId: process.env.FIREBASE_PROJECT_ID
+});
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase with error handling
+let db;
+try {
+  const firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.FIREBASE_APP_ID,
+  };
+
+  const app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  console.log('✅ Firebase initialized successfully');
+} catch (error) {
+  console.error('❌ Firebase initialization failed:', error);
+}
 
 export default async function handler(req, res) {
-  // Allow CORS for external webhooks
+  console.log('=== WEBHOOK REQUEST RECEIVED ===');
+  console.log('Method:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Body type:', typeof req.body);
+  console.log('Body:', req.body);
+  console.log('Timestamp:', new Date().toISOString());
+
+  // Allow CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, X-Webhook-Secret",
-  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Webhook-Secret");
 
   if (req.method === "OPTIONS") {
+    console.log('OPTIONS request handled');
     return res.status(200).end();
   }
 
   if (req.method !== "POST") {
+    console.log('❌ Invalid method:', req.method);
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!db) {
+    console.error('❌ Firebase not initialized');
+    return res.status(500).json({ error: "Firebase not initialized" });
   }
 
   try {
     const body = req.body;
+    console.log('Processing request body:', JSON.stringify(body, null, 2));
 
-    console.log("=== FULL REQUEST BODY ===");
-    console.log(JSON.stringify(body, null, 2));
-
-    // Extract fridge info from email address
+    // Extract fridge info
     let fridgeId, fridgeName;
 
     if (body.to) {
-      // Parse: incoming.magnet+coolio@gmail.com → fridgeName = "coolio"
       const emailMatch = body.to.match(/incoming\.magnet\+([^@]+)@/);
       if (emailMatch) {
-        fridgeName = emailMatch[1].toLowerCase(); // "coolio"
-        fridgeId = generateFridgeId(fridgeName); // Convert to consistent ID
+        fridgeName = emailMatch[1].toLowerCase();
+        fridgeId = generateFridgeId(fridgeName);
+        console.log('✅ Extracted from email:', { fridgeName, fridgeId });
+      } else {
+        console.log('❌ Email format not recognized:', body.to);
       }
     }
 
-    // Fallback to direct fields if available
     fridgeId = fridgeId || body.fridgeId || body.fridge_id || body.id;
-    fridgeName =
-      fridgeName ||
-      body.fridgeName ||
-      body.fridge_name ||
-      body.name ||
-      "unknown";
+    fridgeName = fridgeName || body.fridgeName || body.fridge_name || body.name || "unknown";
 
     let noteContent = body.body || body.content || body.text || "";
 
-    console.log("Extracted:", { fridgeId, fridgeName, email: body.to });
-    console.log("Received note:", {
-      fridgeId,
-      fridgeName,
-      contentLength: noteContent.length,
-    });
+    console.log('Final extracted values:', { fridgeId, fridgeName, contentLength: noteContent.length });
 
     if (!fridgeId) {
+      console.log('❌ No fridgeId found');
       return res.status(400).json({ error: "fridgeId is required" });
     }
 
     if (!noteContent || noteContent.trim() === "") {
+      console.log('❌ No content found');
       return res.status(400).json({ error: "Note content is required" });
     }
 
-    // Process content - convert markdown to HTML
+    console.log('Processing content...');
+    console.log('Original content:', noteContent.substring(0, 200));
+
+    // Process content
     let processedContent = noteContent;
 
     // Convert Apple Notes format checkboxes
@@ -105,14 +123,26 @@ export default async function handler(req, res) {
       .replace(/✅\s*/g, "- [x] ")
       .replace(/☑\s*/g, "- [x] ");
 
+    console.log('After checkbox conversion:', processedContent.substring(0, 200));
+
     // Convert markdown to HTML
     let formattedContent = marked(processedContent);
+    console.log('After markdown conversion:', formattedContent.substring(0, 200));
 
-    // FIX: Clean up malformed checkboxes that are causing the UI issues
-    formattedContent = fixMalformedCheckboxes(formattedContent);
+    // Fix checkboxes
+    formattedContent = formattedContent.replace(/(<input[^>]*?)disabled([^>]*>)/gi, "$1$2");
+    formattedContent = formattedContent.replace(/<input([^>]*?)>/gi, (match, attributes) => {
+      if (!attributes.includes("type=")) {
+        return `<input type="checkbox"${attributes}>`;
+      }
+      return match;
+    });
+
+    console.log('After checkbox fix:', formattedContent.substring(0, 200));
 
     // Extract tags
     const tags = extractTags(formattedContent);
+    console.log('Extracted tags:', tags);
 
     // Create note data
     const noteData = {
@@ -124,12 +154,22 @@ export default async function handler(req, res) {
       tags: tags,
     };
 
+    console.log('Saving note data:', {
+      ...noteData,
+      content: noteData.content.substring(0, 100) + '...'
+    });
+
     // Save to Firestore
     const docRef = await addDoc(collection(db, "notes"), noteData);
-    console.log("Note saved with ID:", docRef.id);
+    console.log('✅ Note saved successfully with ID:', docRef.id);
 
-    // Cleanup old notes (keep newest 10)
-    await cleanupOldNotes(fridgeId);
+    // Cleanup old notes
+    try {
+      await cleanupOldNotes(fridgeId);
+      console.log('✅ Cleanup completed');
+    } catch (cleanupError) {
+      console.log('⚠️ Cleanup failed (non-critical):', cleanupError.message);
+    }
 
     return res.status(200).json({
       success: true,
@@ -138,53 +178,26 @@ export default async function handler(req, res) {
       fridgeId,
       fridgeName,
       tags,
+      timestamp: new Date().toISOString(),
+      debugInfo: {
+        contentLength: formattedContent.length,
+        processedLength: processedContent.length,
+        originalLength: noteContent.length
+      }
     });
+
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error('❌ WEBHOOK ERROR:', error);
+    console.error('Error stack:', error.stack);
     return res.status(500).json({
       error: "Failed to process note",
       details: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 }
 
-// CRITICAL FIX: Clean up malformed checkbox HTML
-function fixMalformedCheckboxes(html) {
-  console.log("=== BEFORE CHECKBOX FIX ===");
-  console.log("Sample HTML:", html.substring(0, 200));
-
-  // Remove any malformed attributes like =""
-  let fixed = html.replace(
-    /<input\s+=""\s+type="checkbox">/g,
-    '<input type="checkbox">',
-  );
-
-  // Fix any input tags that are missing type="checkbox" in list items
-  fixed = fixed.replace(/<li><input([^>]*?)>/gi, function (match, attributes) {
-    if (!attributes.includes('type="checkbox"')) {
-      return '<li><input type="checkbox"' + attributes + ">";
-    }
-    return match;
-  });
-
-  // Remove disabled attributes if they exist
-  fixed = fixed.replace(/(<input[^>]*?)disabled([^>]*>)/gi, "$1$2");
-
-  // Ensure all checkbox inputs have the correct type
-  fixed = fixed.replace(/<input([^>]*?)>/gi, function (match, attributes) {
-    if (match.includes("checkbox") && !attributes.includes("type=")) {
-      return '<input type="checkbox"' + attributes + ">";
-    }
-    return match;
-  });
-
-  console.log("=== AFTER CHECKBOX FIX ===");
-  console.log("Sample HTML:", fixed.substring(0, 200));
-
-  return fixed;
-}
-
-// Generate consistent fridge ID from name
+// Helper functions remain the same...
 function generateFridgeId(fridgeName) {
   let hash = 0;
   const str = fridgeName.toLowerCase().trim();
@@ -196,7 +209,6 @@ function generateFridgeId(fridgeName) {
   return "fridge_" + Math.abs(hash).toString(36);
 }
 
-// Extract tags from content
 function extractTags(content) {
   const tags = [];
   const tagMatches = content.match(/<p[^>]*>\s*#(dad|mom|jess)\s*<\/p>/gi);
@@ -216,7 +228,6 @@ function extractTags(content) {
   return tags;
 }
 
-// Cleanup old notes (keep newest 10 per fridge)
 async function cleanupOldNotes(fridgeId) {
   try {
     const notesQuery = query(
@@ -228,7 +239,6 @@ async function cleanupOldNotes(fridgeId) {
     const snapshot = await getDocs(notesQuery);
     const notes = snapshot.docs;
 
-    // Delete notes beyond the 10 newest
     if (notes.length > 10) {
       const notesToDelete = notes.slice(10);
       for (const noteDoc of notesToDelete) {
@@ -240,3 +250,10 @@ async function cleanupOldNotes(fridgeId) {
     console.log("Cleanup failed (non-critical):", error.message);
   }
 }
+
+*/
+
+// Make test function available
+window.testWebhookStatus = testWebhookStatus;
+
+console.log('🔧 Run testWebhookStatus() to test webhook chain');
