@@ -1,22 +1,22 @@
 # 🧲 Magnet
-**Smart Fridge Notes via Email**
+**Smart Fridge Notes via Email & iOS Shortcuts**
 
-Transform your Samsung Smart Fridge into a family communication hub. Send notes directly to your fridge by email - they appear instantly on the fridge screen!
+Transform your Samsung Smart Fridge into a family communication hub. Send notes directly to your fridge using iOS Shortcuts or email - they appear instantly on the fridge screen with task management, tag filtering, and celebration animations!
 
 ---
 
 ## 🎯 How It Works
 
 **Simple 3-Step Process:**
-1. **Setup:** Visit your fridge's web browser, enter a name (like "Kitchen")
-2. **Get Email:** Your fridge gets a unique email address: `incoming.magnet+kitchen@gmail.com`
-3. **Send Notes:** Email your notes to that address - they appear on the fridge within minutes!
+1. **Setup:** Visit your fridge's web browser, enter your Samsung fridge's name (hint, you gave it a name during the Samsung setup)
+2. **Scan QR Code:** QR code appears with custom iOS Shortcut - scan with your phone
+3. **Add Shortcut:** iOS prompts to add shortcut - tap "Add" and start sharing notes!
 
 **Universal Compatibility:**
-- ✅ **Any device:** iPhone, Android, computer, tablet
-- ✅ **Any app:** Notes, Messages, Gmail, Outlook, etc.
-- ✅ **Any platform:** iOS, Android, Windows, Mac, Linux
-- ✅ **No apps to install** - just email!
+- ✅ **One-Scan Setup:** QR code installs shortcut directly to your iPhone
+- ✅ **Direct Processing:** Shortcuts send notes straight to your specific fridge
+- ✅ **Rich Features:** Checkboxes, task completion, family tags (`#dad`, `#mom`, `#jess`)
+- ✅ **No apps to install** - just scan and go!
 
 ---
 
@@ -24,76 +24,128 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 
 ### The Journey of Your Note
 
-1. **📧 Email Sent:** You send an email to `incoming.magnet+kitchen@gmail.com`
-2. **📨 Gmail Receives:** Email arrives in the monitored Gmail inbox
-3. **🔄 Pipedream Monitors:** Pipedream workflow detects the new email
-4. **📤 Data Processing:** Pipedream extracts email content, subject, and sender
-5. **🌐 Webhook Delivery:** Pipedream sends formatted data to Vercel webhook
-6. **💾 Cloud Storage:** Vercel processes email and saves note to Blob storage
-7. **📡 Real-time Notification:** Vercel attempts to notify connected fridges via Server-Sent Events
-8. **🔄 Backup Polling:** If real-time fails, fridge polls for updates every 2 minutes
-9. **🧊 Fridge Display:** Note appears on Samsung fridge screen with sender attribution
+1. **📱 iOS Share Sheet:** Share note from any app → "Send to Magnet" shortcut
+2. **🌐 Direct to Vercel:** Shortcut sends content directly to Vercel webhook endpoint
+3. **🧠 Content Processing:** Vercel converts markdown to HTML, fixes checkboxes
+4. **💾 Blob Storage:** Note saved to Vercel Blob with cleanup of old versions
+5. **⚡ Real-time Updates:** Fast 15-second polling keeps fridge updated
+6. **🎯 Smart Display:** Notes appear with task completion, tags, and celebrations
 
-### Hybrid Reliability System
+### Shortcut Generation Flow
 
-- **⚡ Real-time Updates:** Instant notifications when SSE connection works
-- **🔄 Polling Backup:** Automatic fallback checks every 2 minutes
-- **🔘 Manual Refresh:** Always-available manual update button
-- **✅ Guaranteed Delivery:** Notes appear within 2 minutes maximum
+1. **🔧 Fridge Setup:** User enters their Samsung fridge's existing name (from Samsung setup)
+2. **📱 QR Code Generation:** Vercel creates QR code containing custom iOS Shortcut URL
+3. **📲 Direct Install:** Scan QR code → iOS prompts "Add Shortcut?" → Tap "Add"
+4. **✅ Instant Setup:** Shortcut appears in Share Sheet immediately, no email needed
+
+### Smart Features in Action
+
+- **✅ Task Management:** Check off items with celebration animations
+- **🏷️ Family Tags:** Filter notes by `#dad`, `#mom`, `#jess` tabs
+- **📱 Multiple Notes:** Paginated display with newest first, completed last
+- **🧟 Note Resurrection:** Uncheck all tasks to move note back to active
+- **🗑️ Smart Cleanup:** Delete individual notes or all at once
 
 ---
 
 ## 🌟 Key Features
 
-### 📧 Email-Based Sync
-- **Universal Access:** Send from any device that can email
-- **Rich Content:** Support for formatted text, lists, and line breaks
-- **Gmail Integration:** Uses your existing Gmail account with Pipedream monitoring
-- **Multiple Fridges:** Each fridge gets its own unique email suffix (`+kitchen`, `+garage`)
+### 📱 iOS Shortcuts Integration
+- **Native Share Sheet:** Works from Notes, Messages, Safari, any app
+- **One-Tap Sending:** Custom shortcut processes and sends instantly
+- **Rich Formatting:** Preserves checkboxes, lists, headers from iOS Notes
+- **QR Code Setup:** Scan code on fridge to install shortcut automatically
 
-### ⚡ Hybrid Update System
-- **Real-time Notifications:** Server-Sent Events for instant updates (when working)
-- **Intelligent Polling:** Automatic backup checks every 2 minutes
-- **Manual Refresh:** Always-reliable manual update button
-- **Connection Status:** Clear indicators showing connection method
+### 🧠 Smart Task Management
+- **Interactive Checkboxes:** Click individual boxes or entire rows
+- **Completion Celebrations:** Confetti and sound effects when all tasks done
+- **Smart Sorting:** Active notes first, completed notes at bottom
+- **Task Resurrection:** Uncheck all items to reactivate completed notes
+
+### 🏷️ Family Organization
+- **Tag Filtering:** Add `#dad`, `#mom`, `#jess` to organize by person
+- **Tab Counts:** See how many notes each family member has
+- **Visual Tags:** Styled tag badges with emoji indicators
+- **Smart Navigation:** Switch between All/Dad/Mom/Jess views
 
 ### 🧊 Fridge-Optimized Interface
-- **Touch-Friendly:** Large buttons and text for easy Samsung fridge interaction
-- **Clean Design:** Modern gradient design with clear status indicators
-- **Persistent Storage:** Notes saved permanently in Vercel Blob storage
-- **Smart Formatting:** Email content automatically formatted for display
-
-### 🔒 Security & Reliability
-- **Webhook Authentication:** Secure communication between Pipedream and Vercel
-- **Public API Endpoint:** Bypasses Vercel OIDC authentication for external webhooks
-- **Dynamic Blob Handling:** Automatically handles Vercel's dynamic blob key system
-- **Fault Tolerance:** Multiple backup systems ensure notes always get delivered
+- **Touch-Friendly:** Large buttons optimized for Samsung Family Hub
+- **Modern Design:** Gradient backgrounds with glassmorphism effects
+- **Smart Polling:** 15-second updates for near real-time experience
+- **Connection Status:** Clear indicators showing system health
 
 ---
 
-## 🛠️ Technology Stack
-
-### Email Processing Pipeline
-- **Gmail:** Primary email inbox (`incoming.magnet+fridgename@gmail.com`)
-- **Pipedream:** Email monitoring and webhook automation service
-- **Webhook Authentication:** Secure communication with shared secrets
-
-### Backend (Vercel Serverless)
-- **Public API Routes:** `/api/public/webhook.js` for external Pipedream integration
-- **Protected API Routes:** `/api/note.js` for fridge communication, `/api/ping.js` for real-time updates
-- **Storage:** Vercel Blob for persistent note storage with dynamic key handling
-- **Real-Time:** Server-Sent Events with polling backup for reliability
+## 🛠️ Technology Stack & Architecture
 
 ### Frontend (Samsung Tizen Browser)
-- **Progressive Web App:** Responsive design optimized for fridge screens
-- **Hybrid Update System:** Real-time + polling + manual refresh
-- **Touch Optimized:** Large targets, clear status indicators
-- **Connection Resilience:** Smart reconnection and fallback systems
+- **`public/fridge.html`:** Main fridge interface with modern CSS
+- **`public/tada.js`:** Core JavaScript for note display, task management, polling
+- **`public/setup.html`:** Initial fridge configuration and QR code generation
+- **Progressive Web App:** Responsive design optimized for fridge touchscreens
 
-### Security & Authentication
-- **OIDC Bypass:** Public webhook endpoints for external service integration
-- **Webhook Secrets:** Authenticated communication between services
-- **CORS Configuration:** Proper cross-origin handling for fridge browsers
+### Backend API (Vercel Serverless)
+- **`api/webhook.js`:** Processes incoming emails from Pipedream
+- **`api/note.js`:** Handles note retrieval, deletion, and fridge communication
+- **`api/ping.js`:** Server-Sent Events for real-time updates (backup)
+- **`api/generate-shortcut.js`:** Creates custom iOS Shortcuts for each fridge
+
+### Storage & Processing
+- **Vercel Blob Storage:** Persistent note storage with automatic cleanup
+- **Marked.js:** Converts iOS Notes markdown to fridge-friendly HTML
+- **Smart Checkbox Processing:** Fixes disabled checkboxes, enables interaction
+- **Dynamic Blob Keys:** Handles Vercel's changing blob URL system
+
+### External Integrations
+- **iOS Shortcuts:** Direct QR code installation and native Share Sheet integration
+- **Vercel Blob:** Persistent storage with automatic cleanup and versioning
+- **Samsung Tizen:** Optimized for Family Hub browser environment
+
+---
+
+## 📂 Project Structure
+
+```
+magnet/
+├── 📁 api/                          # Vercel serverless functions
+│   ├── 📄 webhook.js                # Main email processing endpoint
+│   ├── 📄 note.js                   # Note CRUD operations
+│   ├── 📄 ping.js                   # Real-time notifications (SSE)
+│   ├── 📄 generate-shortcut.js      # iOS Shortcut creation
+│   ├── 📄 send-shortcut-email.js    # Email shortcut to user
+│   └── 📄 shortcut-config.js        # Shortcut template configuration
+│
+├── 📁 public/                       # Frontend static files
+│   ├── 📄 fridge.html               # Main fridge display interface
+│   ├── 📄 tada.js                   # Core JavaScript logic
+│   ├── 📄 setup.html                # Initial fridge setup
+│   ├── 📄 install-shortcut.html     # iOS Shortcut installation
+│   ├── 📄 shortcut-setup.html       # Shortcut configuration
+│   └── 📁 img/                      # Icons and assets
+│
+├── 📁 workflows/                    # GitHub Actions
+│   └── 📄 project-tree.yml          # Auto-generated project structure
+│
+├── 📄 package.json                  # Dependencies and scripts
+├── 📄 README.md                     # This documentation
+└── 📄 PhoneConfig.md                # iOS setup instructions
+```
+
+### Key File Descriptions
+
+#### Core API Routes
+- **`webhook.js`** - Processes emails from Pipedream, converts markdown to HTML, saves to blob storage
+- **`note.js`** - Retrieves notes for fridge display, handles individual/bulk deletion
+- **`ping.js`** - Server-Sent Events endpoint for real-time updates (currently disabled, using polling)
+
+#### Frontend Components  
+- **`fridge.html`** - Modern UI with tab filtering, task management, celebration animations
+- **`tada.js`** - 1300+ lines handling note display, checkbox interaction, polling, celebrations
+- **`setup.html`** - Initial configuration, generates unique fridge ID and email address
+
+#### iOS Integration
+- **`generate-shortcut.js`** - Creates custom iOS Shortcut URLs based on fridge names
+- **`shortcut-config.js`** - Template configuration for iOS Shortcuts generation
 
 ---
 
@@ -101,253 +153,194 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 
 ### For Fridge Owners
 
-1. **Open your Samsung Smart Fridge browser**
+1. **Open Samsung Smart Fridge browser**
 2. **Navigate to:** `https://magnet-mu.vercel.app/setup`
-3. **Enter your fridge name** (e.g., "Kitchen", "Garage")
-4. **Note your email address:** `incoming.magnet+yourname@gmail.com`
-5. **Bookmark the fridge page** for easy access
-6. **Start sending emails!**
+3. **Enter your fridge's Samsung name:** (the name you gave it during Samsung setup)
+4. **Save your fridge info and get QR code**
+5. **Bookmark fridge page:** `https://magnet-mu.vercel.app/fridge?id=your_id`
 
-### For Note Senders
+### For iOS Users
 
-1. **Open any email app** (Gmail, Mail, Outlook, etc.)
-2. **Send to:** `incoming.magnet+fridgename@gmail.com`
-3. **Subject:** Your note title (optional)
-4. **Body:** Your note content
-5. **Send!** - Note appears on fridge within 2 minutes
+1. **Scan QR code** displayed on fridge setup page
+2. **iOS prompts:** "Add 'Send to Magnet' Shortcut?"
+3. **Tap "Add"** - shortcut installs immediately
+4. **Test:** Share any note from Notes app → "Send to Magnet"
+5. **Watch it appear** on fridge within 15 seconds!
+
+### For Other Devices
+
+1. **Use the web interface:** Visit your fridge's URL from any device
+2. **Manual entry:** Type notes directly in the web interface
+3. **Future:** Additional methods may be added for non-iOS devices
 
 ---
 
 ## 💡 Usage Examples
 
-### 📝 Quick Notes
+### 📱 iOS Notes with Tasks
 ```
-To: incoming.magnet+kitchen@gmail.com
-Subject: Dinner Tonight
-Body: Pizza at 7pm! Don't forget to set the table.
-```
+Honey Do List
 
-### 🛒 Shopping Lists
-```
-To: incoming.magnet+kitchen@gmail.com
-Subject: Grocery List
-Body: 
-- Milk (2%)
-- Bread (whole wheat)
-- Eggs (dozen)
-- Coffee (dark roast)
-- Bananas
-```
+- [ ] Weed Garden Bed
+- [ ] Hang Bathroom Stuff  
+- [ ] Put golf clubs away
 
-### 📅 Family Reminders
+#dad
 ```
-To: incoming.magnet+kitchen@gmail.com
-Subject: Weekend Plans
-Body: 
-Saturday:
-- Soccer practice 9am
-- Grocery shopping 2pm
-- Movie night 7pm
+*Result: Interactive checklist on fridge with celebration when completed*
 
-Sunday:
-- Church 10am
-- Family BBQ 3pm
+### 🛒 Shopping List for Mom
 ```
+Grocery Run
 
-### 🏠 Household Updates
+- [ ] Milk (2%)
+- [ ] Bread (whole wheat)
+- [ ] Coffee (dark roast)
+- [ ] Bananas
+
+#mom
 ```
-To: incoming.magnet+garage@gmail.com
-Subject: Maintenance
-Body: 
-Scheduled this week:
-✓ HVAC service (Wed 2pm)
-✓ Lawn care (Fri 10am)
-⚠️ Plumber coming Monday for kitchen sink
+*Result: Appears in Mom tab, checkboxes for marking items as picked up*
+
+### 🍕 Quick Family Note
 ```
+Dinner Tonight
+
+Pizza delivery at 7pm! 
+Don't forget to set the table.
+
+#jess
+```
+*Result: Simple note in Jess tab with styled formatting*
 
 ---
 
-## 🔧 Setup & Configuration
+## 🔧 Current Implementation Details
 
-### Environment Variables (Vercel)
-```bash
-# Automatically configured by Vercel
-BLOB_READ_WRITE_TOKEN=your_blob_token
-VERCEL_URL=your_deployment_url
+### Polling vs Real-Time
+- **Current:** 15-second polling (fast and reliable)
+- **Attempted:** Server-Sent Events (SSE) - disabled due to 405 errors
+- **Why Polling Works:** Simple, reliable, fast enough for family use
+- **Performance:** Minimal server load, excellent user experience
 
-# Webhook Security (for Pipedream authentication)
-WEBHOOK_SECRET=your_secure_random_string
-```
+### Task Management System
+- **Checkbox Detection:** Converts iOS Notes checkboxes to interactive HTML
+- **Click Handling:** Works on both checkbox and entire row
+- **Visual Feedback:** Strikethrough, opacity changes, background highlights
+- **Completion Logic:** Requires 2+ tasks, celebrates when all checked
+- **Resurrection:** Uncheck all tasks to move note back to active
 
-### Pipedream Setup
-1. **Create Pipedream account** (free tier available)
-2. **Set up Gmail trigger** to monitor `incoming.magnet+*@gmail.com`
-3. **Configure HTTP webhook step** pointing to: `https://your-app.vercel.app/api/public/webhook`
-4. **Add webhook secret** in HTTP headers: `X-Webhook-Secret: your_secret`
-5. **Test email processing** end-to-end
-
-### Gmail Configuration
-- **Email Address:** Use your existing Gmail account
-- **Email Format:** `incoming.magnet+fridgename@gmail.com`
-- **Pipedream Access:** Grant Pipedream permission to monitor your Gmail
-- **No MX Records Needed:** Uses standard Gmail infrastructure
+### Tag System
+- **Detection:** Regex parsing for `#dad`, `#mom`, `#jess` patterns
+- **Visual Display:** Styled badges with gradients and emojis
+- **Tab Filtering:** Separate views with note counts
+- **Smart Sorting:** Active notes first, completed notes last
 
 ---
 
-## 🏗️ Project Structure
+## 🎯 Roadmap & Future Plans
 
-```
-- name: Readme Tree
-  uses: RavelloH/readme-tree@v1.1.0
+### v1.1 - Enhanced Smart Features 🚧
+- [ ] **Alarm Integration:** Set reminders with time-based notifications
+- [ ] **Calendar Sync:** Integrate with family calendars for events
+- [ ] **Voice Notes:** Record audio messages via iPhone shortcuts
+- [ ] **Photo Attachments:** Send images that display on fridge
 
-```
+### v1.2 - Standalone Tizen App 🔮
+- [ ] **Native Tizen App:** Move beyond web browser to full app
+- [ ] **Background Processing:** Real-time updates without browser limitations  
+- [ ] **Offline Support:** Cache notes locally on fridge
+- [ ] **Push Notifications:** True instant updates via Samsung services
+
+### v1.3 - Advanced Family Features 🌟
+- [ ] **Smart Scheduling:** Recurring tasks and family schedules
+- [ ] **Location Awareness:** "Remind me when I'm at the store" integration
+- [ ] **Family Analytics:** Track completion rates and family activity
+- [ ] **Multi-Fridge Support:** Kitchen, garage, basement displays
+
+### v2.0 - Smart Home Ecosystem 🏠
+- [ ] **Voice Control:** "Hey Google, add milk to fridge list"
+- [ ] **IoT Integration:** Connect with smart appliances and sensors
+- [ ] **Home Assistant:** Full smart home platform integration
+- [ ] **Mobile Companion:** Dedicated iPhone/Android apps with widgets
+
+### v2.1 - Enterprise & Community 🏢
+- [ ] **Multi-Tenant SaaS:** Custom domains for families/organizations
+- [ ] **API Platform:** Let developers build integrations
+- [ ] **Marketplace:** Community shortcuts and templates
+- [ ] **Analytics Dashboard:** Family insights and usage patterns
 
 ---
 
-## 🧪 Development
+## 🔧 Development & Contributing
 
 ### Local Development
 ```bash
-# Clone repository
-git clone https://github.com/EpicAmps/Magnet.git
+# Clone and setup
+git clone https://github.com/yourusername/magnet.git
 cd magnet
-
-# Install dependencies
 npm install
+
+# Environment setup
+cp .env.example .env.local
+# Add your BLOB_READ_WRITE_TOKEN and WEBHOOK_SECRET
 
 # Run development server
 npm run dev
-
 # Visit http://localhost:3000
 ```
 
-### Testing Email Integration
-```bash
-# Test webhook locally with ngrok
-ngrok http 3000
+### Testing Email Flow
+1. **Setup ngrok:** `ngrok http 3000`
+2. **Configure Pipedream:** Point webhook to ngrok URL
+3. **Send test email:** Use your fridge's email address
+4. **Check logs:** Vercel function logs and browser console
 
-# Configure Pipedream to use ngrok URL
-# Send test emails to verify end-to-end processing
-```
-
-### Testing Individual Components
-```bash
-# Test webhook endpoint directly
-curl -X POST http://localhost:3000/api/public/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-Webhook-Secret: your_secret" \
-  -d '{"to": "incoming.magnet+test@gmail.com", "from": "you@example.com", "subject": "Test", "body": "Hello World"}'
-
-# Test note retrieval
-curl "http://localhost:3000/api/note?fridgeId=your_fridge_id"
-```
-
-### Deployment
-```bash
-# Deploy to Vercel (auto-deployment via GitHub)
-git push origin main
-
-# Manual deployment
-vercel deploy --prod
-```
+### Common Issues & Solutions
+- **405 SSE Errors:** Normal, polling backup works great
+- **Checkbox not clicking:** Clear browser cache, check event handlers
+- **Notes not appearing:** Check Pipedream workflow status and Vercel logs
+- **QR codes not working:** Verify shortcut generation endpoint
 
 ---
 
-## 🔧 Troubleshooting
+## 🎉 Why Magnet Works
 
-### Email Not Appearing on Fridge
+### Technical Strengths
+- **Hybrid Architecture:** Combines simplicity of email with power of iOS Shortcuts
+- **Fault Tolerance:** Multiple backup systems ensure notes always get through
+- **Samsung Optimized:** Specifically designed for Family Hub browser limitations
+- **Modern UX:** Celebration animations, smooth interactions, responsive design
 
-1. **Check Pipedream workflow status** - Is it active and processing emails?
-2. **Verify webhook endpoint** - Is `https://your-app.vercel.app/api/public/webhook` accessible?
-3. **Test webhook secret** - Are Pipedream and Vercel using the same secret?
-4. **Check Vercel function logs** - Any errors in email processing?
-5. **Try manual refresh** - Does the refresh button work on the fridge?
+### Family Benefits
+- **Zero Learning Curve:** Uses tools families already know (email, iOS Notes)
+- **Universal Access:** Anyone can send notes from any device
+- **Smart Organization:** Tags and tabs keep family chaos organized
+- **Satisfying Interactions:** Task completion feels rewarding and fun
 
-### Connection Issues
-
-- **🟢 Connected:** System is working (any method)
-- **🔴 Connecting...:** All methods failing, check network/config
-
-### Common Issues
-
-- **OIDC Authentication Errors:** Use `/api/public/webhook` instead of `/api/email-webhook`
-- **Blob Not Found:** Vercel uses dynamic blob keys, handled automatically
-- **SSE Connection Timeouts:** Normal on fridge browsers, polling backup active
-- **Module Import Errors:** Ensure consistent ES6 module usage across API routes
+### Developer Benefits
+- **Serverless Architecture:** Scales automatically, minimal maintenance
+- **Modern Stack:** Latest Vercel features, ES6 modules, progressive enhancement
+- **Extensible Design:** Easy to add new features and integrations
+- **Well Documented:** Clear code structure and comprehensive documentation
 
 ---
 
-## 🤝 Contributing
+## 📞 Support & Community
 
-We welcome contributions! Here are some areas where help is needed:
-
-- **Email Providers:** Support for additional email services beyond Gmail
-- **Mobile Apps:** Native iOS/Android applications with push notifications
-- **Smart Home:** Integration with Alexa, Google Home, HomeKit
-- **Enterprise:** Multi-tenant support, advanced admin features
-- **UI/UX:** Improved fridge interface, accessibility features
-
-### Development Setup
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly (especially email flow)
-5. Submit a pull request
-
----
-
-## 📋 Roadmap
-
-### v1.0 - Core Email System ✅
-- [x] Gmail + Pipedream email processing
-- [x] Hybrid real-time + polling updates
-- [x] Samsung Tizen fridge compatibility
-- [x] Persistent Vercel Blob storage
-- [x] Secure webhook authentication
-
-### v1.1 - Enhanced Experience
-- [ ] Rich email formatting (HTML, images)
-- [ ] Attachment handling (images, PDFs)
-- [ ] Multiple note persistence and history
-- [ ] Improved error handling and status messages
-
-### v1.2 - Multi-User Support
-- [ ] Personal account system with unique domains
-- [ ] Family/team workspaces
-- [ ] Permission management and access control
-- [ ] Usage analytics and insights
-
-### v2.0 - Smart Home Integration
-- [ ] Voice assistant support (Alexa, Google)
-- [ ] IoT device integration beyond fridges
-- [ ] Mobile companion apps with push notifications
-- [ ] Advanced automation and scheduling rules
-
----
-
-## 🎉 Success Stories
-
-> *"Finally, a way to leave notes for my family that they actually see! No more sticky notes falling off the fridge."* - Sarah M.
-
-> *"Perfect for our busy household. Kids can email their schedules from school, and we see them instantly on the kitchen fridge."* - Mike D.
-
-> *"The hybrid system is genius - even when our WiFi is flaky, notes still get through via the polling backup."* - Jennifer L.
-
----
-
-## 📞 Support
-
-- **Documentation:** [GitHub Wiki](https://github.com/EpicAmps/Magnet/wiki)
-- **Issues:** [GitHub Issues](https://github.com/EpicAmps/Magnet/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/EpicAmps/Magnet/discussions)
-- **Email:** incoming.magnet+support@gmail.com
+- **GitHub Issues:** [Report bugs and request features](https://github.com/yourusername/magnet/issues)
+- **Discussions:** [Community Q&A and ideas](https://github.com/yourusername/magnet/discussions)  
+- **Email Support:** `incoming.magnet+support@gmail.com`
+- **Demo Video:** [Watch Magnet in action](https://your-demo-link.com)
 
 ---
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - Build amazing things with this foundation!
 
 ---
 
 **Made with 🧲 for families who want to stay connected**
+
+*"Finally, a fridge app that actually works and feels magical to use!"*
