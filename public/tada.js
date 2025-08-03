@@ -1463,6 +1463,69 @@ function debugDeleteRequest(noteIndex, noteId) {
       console.error("Delete request failed:", error);
     });
 }
+function testWebhookStatus() {
+  console.log("=== TESTING WEBHOOK STATUS ===");
+
+  // Test if webhook endpoint exists and responds
+  fetch("/api/webhook", {
+    method: "GET", // Just test if it responds
+  })
+    .then((response) => {
+      console.log("Webhook endpoint status:", response.status);
+      if (response.status === 405) {
+        console.log(
+          "✅ Webhook endpoint exists (405 = Method Not Allowed for GET is expected)",
+        );
+      } else {
+        console.log("❌ Unexpected webhook response status");
+      }
+    })
+    .catch((error) => {
+      console.error("❌ Webhook endpoint not reachable:", error);
+    });
+
+  // Test webhook with sample data
+  const testData = {
+    body: "Test note from debug\n\n- [ ] Test task\n\n#jess",
+    to: "incoming.magnet+" + fridgeName + "@gmail.com",
+    subject: "Debug Test",
+    from: "Debug",
+  };
+
+  console.log("Testing webhook with data:", testData);
+
+  fetch("/api/webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(testData),
+  })
+    .then((response) => {
+      console.log("Webhook test response status:", response.status);
+      return response.text();
+    })
+    .then((text) => {
+      console.log("Webhook test response:", text);
+      try {
+        const json = JSON.parse(text);
+        console.log("Parsed webhook response:", json);
+
+        if (json.success) {
+          console.log("✅ Webhook test successful! Note ID:", json.noteId);
+          console.log("Now checking if note appears in API...");
+          setTimeout(() => fetchNote(), 2000);
+        } else {
+          console.log("❌ Webhook test failed:", json.error);
+        }
+      } catch (e) {
+        console.log("Response is not JSON:", text);
+      }
+    })
+    .catch((error) => {
+      console.error("Webhook test failed:", error);
+    });
+}
 
 // CRITICAL: Make functions globally available for onclick handlers
 window.deleteNote = deleteNote;
