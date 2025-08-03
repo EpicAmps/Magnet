@@ -1,4 +1,4 @@
-// api/webhook.js - Firebase version
+// api/webhook.js - Firebase version with checkbox fix
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -108,32 +108,8 @@ export default async function handler(req, res) {
     // Convert markdown to HTML
     let formattedContent = marked(processedContent);
 
-    // Fix checkboxes - remove disabled attribute
-    formattedContent = formattedContent.replace(
-      /(<input[^>]*?)disabled([^>]*>)/gi,
-      "$1$2",
-    );
-    formattedContent = formattedContent.replace(
-      /<input([^>]*?)>/gi,
-      (match, attributes) => {
-        if (!attributes.includes("type=")) {
-          return `<input type="checkbox"${attributes}>`;
-        }
-        return match;
-      },
-    );
-
-    // Generate consistent fridge ID from name
-    function generateFridgeId(fridgeName) {
-      let hash = 0;
-      const str = fridgeName.toLowerCase().trim();
-      for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash = hash & hash;
-      }
-      return "fridge_" + Math.abs(hash).toString(36);
-    }
+    // FIX: Clean up malformed checkboxes that are causing the UI issues
+    formattedContent = fixMalformedCheckboxes(formattedContent);
 
     // Extract tags
     const tags = extractTags(formattedContent);
@@ -170,6 +146,54 @@ export default async function handler(req, res) {
       details: error.message,
     });
   }
+}
+
+// CRITICAL FIX: Clean up malformed checkbox HTML
+function fixMalformedCheckboxes(html) {
+  console.log("=== BEFORE CHECKBOX FIX ===");
+  console.log("Sample HTML:", html.substring(0, 200));
+
+  // Remove any malformed attributes like =""
+  let fixed = html.replace(
+    /<input\s+=""\s+type="checkbox">/g,
+    '<input type="checkbox">',
+  );
+
+  // Fix any input tags that are missing type="checkbox" in list items
+  fixed = fixed.replace(/<li><input([^>]*?)>/gi, function (match, attributes) {
+    if (!attributes.includes('type="checkbox"')) {
+      return '<li><input type="checkbox"' + attributes + ">";
+    }
+    return match;
+  });
+
+  // Remove disabled attributes if they exist
+  fixed = fixed.replace(/(<input[^>]*?)disabled([^>]*>)/gi, "$1$2");
+
+  // Ensure all checkbox inputs have the correct type
+  fixed = fixed.replace(/<input([^>]*?)>/gi, function (match, attributes) {
+    if (match.includes("checkbox") && !attributes.includes("type=")) {
+      return '<input type="checkbox"' + attributes + ">";
+    }
+    return match;
+  });
+
+  console.log("=== AFTER CHECKBOX FIX ===");
+  console.log("Sample HTML:", fixed.substring(0, 200));
+
+  return fixed;
+}
+
+// Generate consistent fridge ID from name
+function generateFridgeId(fridgeName) {
+  let hash = 0;
+  const str = fridgeName.toLowerCase().trim();
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash;
+  }
+  return "fridge_" + Math.abs(hash).toString(36);
 }
 
 // Extract tags from content
