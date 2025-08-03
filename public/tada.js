@@ -1378,6 +1378,33 @@ function testDeleteFunctions() {
   }
 }
 
+function testGlobalFunctions() {
+  console.log("=== GLOBAL FUNCTION TEST ===");
+  console.log("window.deleteNote:", typeof window.deleteNote);
+  console.log(
+    "window.deleteIndividualNote:",
+    typeof window.deleteIndividualNote,
+  );
+  console.log("window.switchToTab:", typeof window.switchToTab);
+  console.log("window.changePage:", typeof window.changePage);
+  console.log("window.toggleInfo:", typeof window.toggleInfo);
+  console.log("window.fetchNote:", typeof window.fetchNote);
+}
+
+window.testGlobalFunctions = testGlobalFunctions;
+console.log(
+  "🔧 Run testGlobalFunctions() to verify onclick handlers will work",
+);
+
+// CRITICAL: Make functions globally available for onclick handlers
+window.deleteNote = deleteNote;
+window.deleteIndividualNote = deleteIndividualNote;
+window.switchToTab = switchToTab;
+window.changePage = changePage;
+window.goToSetup = goToSetup;
+window.toggleInfo = toggleInfo;
+window.fetchNote = fetchNote;
+
 // Make test function available
 window.testDeleteFunctions = testDeleteFunctions;
 console.log("🔧 Added testDeleteFunctions() to console");
