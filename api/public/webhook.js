@@ -52,10 +52,17 @@ export default async function handler(req, res) {
 
   try {
     // Extract email data from iOS Shortcut
+    // In your webhook.js, add this right after the try { line:
+    console.log("=== FULL REQUEST BODY ===");
+    console.log(JSON.stringify(body, null, 2));
+
     const body = req.body;
     let noteContent = body.content || body.text || body.body || "";
-    let fridgeId = body.fridgeId;
-    let fridgeName = body.fridgeName || "unknown";
+    let fridgeId = body.fridgeId || body.fridge_id || body.id || body.fridgeID;
+    let fridgeName =
+      body.fridgeName || body.fridge_name || body.name || "unknown";
+
+    console.log("Extracted:", { fridgeId, fridgeName });
 
     console.log("Received note:", {
       fridgeId,
