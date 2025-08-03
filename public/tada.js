@@ -49,6 +49,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+function fetchNote() {
+    console.log('Manual refresh requested - Firebase real-time should handle updates automatically');
+    document.getElementById('statusText').textContent = '🔄 Manual refresh (Firebase handles real-time)';
+}
 
 function testPingEndpoint() {
     console.log('=== TESTING PING ENDPOINT ===');
