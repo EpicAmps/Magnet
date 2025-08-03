@@ -757,7 +757,50 @@ function findNoteIndexFromElement(noteElement) {
 }
 
 // Task interaction setup
-setupTaskListInteraction;
+function setupTaskListInteraction() {
+  document
+    .getElementById("notesContainer")
+    .addEventListener("click", function (event) {
+      // Check if we clicked directly on a checkbox
+      if (event.target.type === "checkbox") {
+        console.log("Direct checkbox click detected");
+
+        var checkbox = event.target;
+        var listItem = checkbox.closest("li");
+
+        // Add visual feedback with a small delay to let the checkbox update first
+        setTimeout(function () {
+          updateCheckboxVisuals(checkbox, listItem);
+          updateCheckboxInNoteData(checkbox); // This function updates the note data
+          checkTaskInteraction(checkbox, listItem);
+        }, 10);
+
+        return; // Exit early - we handled the checkbox click
+      }
+
+      // Handle clicks on the list item (but not on checkboxes)
+      var listItem = event.target.closest("li");
+      if (listItem && listItem.querySelector('input[type="checkbox"]')) {
+        var checkbox = listItem.querySelector('input[type="checkbox"]');
+
+        // Only handle this if we didn't click directly on the checkbox
+        if (event.target !== checkbox) {
+          console.log("List item click detected (not on checkbox)");
+
+          // Prevent default to avoid any unwanted behavior
+          event.preventDefault();
+
+          // Toggle the checkbox state manually
+          checkbox.checked = !checkbox.checked;
+
+          // Update visuals and data
+          updateCheckboxVisuals(checkbox, listItem);
+          updateCheckboxInNoteData(checkbox); // This function updates the note data
+          checkTaskInteraction(checkbox, listItem);
+        }
+      }
+    });
+}
 
 function updateCheckboxInNoteData(checkbox) {
   // Find which note this checkbox belongs to
@@ -1211,7 +1254,7 @@ function initializeApp() {
   if (fridgeId) {
     console.log("🚀 Starting app with API polling...");
 
-    // Setup task interaction
+    // Setup task interaction - THIS WAS MISSING!
     setupTaskListInteraction();
 
     // Initial load
