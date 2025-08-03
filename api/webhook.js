@@ -1,3 +1,4 @@
+// api/webhook.js - Clean version without frontend code
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -197,7 +198,7 @@ export default async function handler(req, res) {
   }
 }
 
-// Helper functions remain the same...
+// Helper functions
 function generateFridgeId(fridgeName) {
   let hash = 0;
   const str = fridgeName.toLowerCase().trim();
@@ -246,14 +247,7 @@ async function cleanupOldNotes(fridgeId) {
       }
       console.log(`Cleaned up ${notesToDelete.length} old notes`);
     }
-  } catch (error) {
+  } catch error) {
     console.log("Cleanup failed (non-critical):", error.message);
   }
 }
-
-*/
-
-// Make test function available
-window.testWebhookStatus = testWebhookStatus;
-
-console.log('🔧 Run testWebhookStatus() to test webhook chain');
