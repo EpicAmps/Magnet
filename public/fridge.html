@@ -1,1204 +1,1307 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magnet Notes</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=info" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=refresh" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=delete" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=settings" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0; 
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: radial-gradient( circle farthest-corner at -24.7% -47.3%,  rgba(6,130,165,1) 0%, rgba(34,48,86,1) 66.8%, rgba(15,23,42,1) 100.2% );
-            min-height: 100vh;
-            padding: 20px;
-            color: white;
-        }
-        
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-        
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px; /* Reduced from 30px */
-            flex-wrap: wrap;
-            position: relative; /* For tooltip positioning */
-        }
-        
-        .app-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .magnet-logo {
-            width: 43px;
-            height: 48px;
-            object-fit: contain;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Magnet Notes</title>
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=info"
+        />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=refresh"
+        />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=delete"
+        />
+        <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=settings"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-        .svg-icon {
-            width: 24px;
-            height: 24px;
-            object-fit: contain;
-            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-        }
-        
-        h1 {
-            font-size: 3rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        /* Info button styling */
-        .info-button {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .info-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Info popup styling - hidden by default */
-        .info-popup {
-            position: absolute;
-            top: 60px;
-            right: 0;
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            min-width: 350px;
-            z-index: 1000;
-            display: none; /* Hidden by default */
-            backdrop-filter: blur(10px);
-        }
-        
-        .info-popup.show {
-            display: block; /* Show when .show class is added */
-        }
-        
-        .info-popup h3 {
-            margin-bottom: 15px;
-            color: #2c3e50;
-            font-size: 1.3rem;
-        }
-        
-        .info-popup p {
-            margin-bottom: 10px;
-            line-height: 1.4;
-            font-size: 0.95rem;
-        }
-        
-        .close-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-        
-        .close-btn:hover {
-            background: #c0392b;
-        }
-        
-        .fridge-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-        
-        .status {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px 15px; /* Reduced padding */
-            border-radius: 10px;
-            margin-bottom: 15px; /* Reduced from 20px */
-            font-size: 1rem; /* Reduced from 1.1rem */
-            border-left: 4px solid #DF5727;
-            text-align: center;
-        }
-        
-        .note-content {
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            padding: 25px; /* Reduced from 30px */
-            border-radius: 15px;
-            font-size: 1.4rem;
-            line-height: 1.8;
-            min-height: 200px;
-            white-space: wrap;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        /* Samsung Family Hub browser-specific fixes */
-        @media screen and (min-device-width: 1920px) and (min-device-height: 1080px) {
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: radial-gradient(
+                    circle farthest-corner at -24.7% -47.3%,
+                    rgba(6, 130, 165, 1) 0%,
+                    rgba(34, 48, 86, 1) 66.8%,
+                    rgba(15, 23, 42, 1) 100.2%
+                );
+                min-height: 100vh;
+                padding: 20px;
+                color: white;
+            }
+
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 30px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            }
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px; /* Reduced from 30px */
+                flex-wrap: wrap;
+                position: relative; /* For tooltip positioning */
+            }
+
+            .app-title {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .magnet-logo {
+                width: 43px;
+                height: 48px;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            .svg-icon {
+                width: 24px;
+                height: 24px;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            }
+
+            h1 {
+                font-size: 3rem;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            }
+
+            /* Info button styling */
+            .info-button {
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+                cursor: pointer;
+                transition: background 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .info-button:hover {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            /* Info popup styling - hidden by default */
+            .info-popup {
+                position: absolute;
+                top: 60px;
+                right: 0;
+                background: rgba(255, 255, 255, 0.95);
+                color: #333;
+                padding: 20px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                min-width: 350px;
+                z-index: 1000;
+                display: none; /* Hidden by default */
+                backdrop-filter: blur(10px);
+            }
+
+            .info-popup.show {
+                display: block; /* Show when .show class is added */
+            }
+
+            .info-popup h3 {
+                margin-bottom: 15px;
+                color: #2c3e50;
+                font-size: 1.3rem;
+            }
+
+            .info-popup p {
+                margin-bottom: 10px;
+                line-height: 1.4;
+                font-size: 0.95rem;
+            }
+
+            .close-btn {
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-top: 15px;
+                font-size: 0.9rem;
+            }
+
+            .close-btn:hover {
+                background: #c0392b;
+            }
+
+            .fridge-info {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 10px 15px;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                text-align: center;
+            }
+
+            .status {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 10px 15px; /* Reduced padding */
+                border-radius: 10px;
+                margin-bottom: 15px; /* Reduced from 20px */
+                font-size: 1rem; /* Reduced from 1.1rem */
+                border-left: 4px solid #df5727;
+                text-align: center;
+            }
+
             .note-content {
-                zoom: 0.8 !important; /* Counter Samsung's 200% zoom */
-                transform: scale(1) !important; /* Force proper scaling */
+                background: rgba(255, 255, 255, 0.9);
+                color: #333;
+                padding: 25px; /* Reduced from 30px */
+                border-radius: 15px;
+                font-size: 1.4rem;
+                line-height: 1.8;
+                min-height: 200px;
+                white-space: wrap;
+                box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1);
             }
-        }
-        
-        /* Ultra-compact spacing for Samsung fridge display */
-        .note-content h1 {
-            color: #2c3e50 !important;
-            font-size: 1.8rem !important;
-            margin: 16px 0 16px 0 !important; 
-            padding: 0 !important; /* Remove all padding */
-            border-bottom: 2px solid #3498db !important;
-            padding-bottom: 4px !important; /* Minimal bottom padding for border */
-            display: block !important;
-            line-height: 1.1 !important; /* Tight line height */
-        }
-        
-        .note-content h2 {
-            color: #2c3e50 !important;
-            font-size: 1.5rem !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-bottom: 1px solid #95a5a6 !important;
-            padding-bottom: 1px !important;
-            display: block !important;
-            line-height: 1.1 !important;
-        }
-        
-        .note-content h3 {
-            color: #2c3e50 !important;
-            font-size: 1.3rem !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-            line-height: 1.1 !important;
-        }
-        
-        /* Force ultra-tight list spacing */
-        .note-content ul, .note-content ol {
-            margin: 0 !important;
-            padding: 0 !important;
-            padding-left: 10px !important; /* Just enough for indentation */
-            display: block !important;
-        }
-        
-        /* Minimal list item spacing */
-        .note-content li {
-            margin: 0 !important; /* Zero margins */
-            padding: 2px 4px !important; /* Minimal padding */
-            font-size: 1.2rem !important;
-            line-height: 1.8 !important; /* Very tight line height */
-            align-items: flex-start !important;
-            gap: 8px !important; /* Smaller gap */
-            border-radius: 6px !important;
-            cursor: pointer !important;
-            transition: background-color 0.2s ease !important;
-            position: relative !important;
-        }
-        
-        /* Checkbox styling for task lists */
-        .note-content input[type="checkbox"] {
-            transform: scale(1.8) !important; /* Slightly smaller but still touch-friendly */
-            margin: 0 12px 4px 0 !important; /* Controlled spacing */
-            cursor: pointer !important;
-            vertical-align: middle !important; /* Align to top of text */
-            pointer-events: auto !important;
-            flex-shrink: 0 !important; /* Don't shrink checkbox */
-        }
-        
-        /* Hover/touch feedback for task rows */
-        .note-content li:hover {
-            background-color: rgba(52, 152, 219, 0.1); /* Light blue on hover */
-        }
-        
-        /* Active state for touch feedback */
-        .note-content li:active {
-            background-color: rgba(52, 152, 219, 0.2); /* Darker blue when pressed */
-        }
-        
-        /* Make task text unselectable to avoid selection on touch */
-        .note-content li {
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        
-        /* Remove default list bullets for checkbox items */
-        .note-content ul {
-            list-style: none !important;
-            padding-left: 10px !important;
-            margin: 0 !important;
-        }
-        
-        /* Force proper spacing between elements */
-        .note-content > * {
-            margin-bottom: 2px !important; /* Minimal space between all elements */
-        }
-        
-        .note-content > *:first-child {
-            margin-top: 0 !important; /* No top margin on first element */
-        }
-        
-        .note-content > *:last-child {
-            margin-bottom: 0 !important; /* No bottom margin on last element */
-        }
-        
-        /* Specific fix for heading followed by list */
-        .note-content h1 + ul,
-        .note-content h2 + ul,
-        .note-content h3 + ul {
-            margin-top: 3px !important; /* Tiny gap between heading and list */
-        }
-        
-        /* Bold and italic text */
-        .note-content strong {
-            color: #2c3e50;
-            font-weight: 700;
-        }
-        
-        .note-content em {
-            color: #7f8c8d;
-            font-style: italic;
-        }
-        
-        /* Code blocks and inline code */
-        .note-content code {
-            background: #ecf0f1;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-        }
-        
-        .note-content pre {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 15px 0;
-        }
-        
-        .note-content pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-        }
-        
-        /* Blockquotes */
-        .note-content blockquote {
-            border-left: 5px solid #DF5727;
-            margin: 20px 0;
-            padding: 15px 20px;
-            background: #ecf0f1;
-            font-style: italic;
-        }
-        
-        /* Hide sender attribution completely */
-        .note-content .sender-attribution {
-            display: none !important;
-        }
-        
-        /* Multiple notes styling */
-        .note-item {
-            background: rgba(255, 255, 255, 0.95);
-            color: #333;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 15px;
-            border-left: 4px solid #DF5727;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .note-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .note-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-    
-        .note-meta-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .note-sender {
-            font-weight: 600;
-            color: #192139;
-        }
-        
-        .note-time {
-            font-size: 0.8rem;
-            color: #666;
-        }
-        
-        .note-item-content {
-            font-size: 1.2rem;
-            line-height: 1.6;
-        }
 
-        @media (hover: none) and (pointer: coarse) {
+            /* Samsung Family Hub browser-specific fixes */
+            @media screen and (min-device-width: 1920px) and (min-device-height: 1080px) {
+                .note-content {
+                    zoom: 0.8 !important; /* Counter Samsung's 200% zoom */
+                    transform: scale(1) !important; /* Force proper scaling */
+                }
+            }
+
+            /* Ultra-compact spacing for Samsung fridge display */
+            .note-content h1 {
+                color: #2c3e50 !important;
+                font-size: 1.8rem !important;
+                margin: 16px 0 16px 0 !important;
+                padding: 0 !important; /* Remove all padding */
+                border-bottom: 2px solid #3498db !important;
+                padding-bottom: 4px !important; /* Minimal bottom padding for border */
+                display: block !important;
+                line-height: 1.1 !important; /* Tight line height */
+            }
+
+            .note-content h2 {
+                color: #2c3e50 !important;
+                font-size: 1.5rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border-bottom: 1px solid #95a5a6 !important;
+                padding-bottom: 1px !important;
+                display: block !important;
+                line-height: 1.1 !important;
+            }
+
+            .note-content h3 {
+                color: #2c3e50 !important;
+                font-size: 1.3rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                line-height: 1.1 !important;
+            }
+
+            /* Force ultra-tight list spacing */
+            .note-content ul,
+            .note-content ol {
+                margin: 0 !important;
+                padding: 0 !important;
+                padding-left: 10px !important; /* Just enough for indentation */
+                display: block !important;
+            }
+
+            /* Minimal list item spacing */
+            .note-content li {
+                margin: 0 !important; /* Zero margins */
+                padding: 2px 4px !important; /* Minimal padding */
+                font-size: 1.2rem !important;
+                line-height: 1.8 !important; /* Very tight line height */
+                align-items: flex-start !important;
+                gap: 8px !important; /* Smaller gap */
+                border-radius: 6px !important;
+                cursor: pointer !important;
+                transition: background-color 0.2s ease !important;
+                position: relative !important;
+            }
+
+            /* Checkbox styling for task lists */
+            .note-content input[type="checkbox"] {
+                transform: scale(
+                    1.8
+                ) !important; /* Slightly smaller but still touch-friendly */
+                margin: 0 12px 4px 0 !important; /* Controlled spacing */
+                cursor: pointer !important;
+                vertical-align: middle !important; /* Align to top of text */
+                pointer-events: auto !important;
+                flex-shrink: 0 !important; /* Don't shrink checkbox */
+            }
+
+            /* Hover/touch feedback for task rows */
+            .note-content li:hover {
+                background-color: rgba(
+                    52,
+                    152,
+                    219,
+                    0.1
+                ); /* Light blue on hover */
+            }
+
+            /* Active state for touch feedback */
+            .note-content li:active {
+                background-color: rgba(
+                    52,
+                    152,
+                    219,
+                    0.2
+                ); /* Darker blue when pressed */
+            }
+
+            /* Make task text unselectable to avoid selection on touch */
+            .note-content li {
+                user-select: none;
+                -webkit-user-select: none;
+            }
+
+            /* Remove default list bullets for checkbox items */
+            .note-content ul {
+                list-style: none !important;
+                padding-left: 10px !important;
+                margin: 0 !important;
+            }
+
+            /* Force proper spacing between elements */
+            .note-content > * {
+                margin-bottom: 2px !important; /* Minimal space between all elements */
+            }
+
+            .note-content > *:first-child {
+                margin-top: 0 !important; /* No top margin on first element */
+            }
+
+            .note-content > *:last-child {
+                margin-bottom: 0 !important; /* No bottom margin on last element */
+            }
+
+            /* Specific fix for heading followed by list */
+            .note-content h1 + ul,
+            .note-content h2 + ul,
+            .note-content h3 + ul {
+                margin-top: 3px !important; /* Tiny gap between heading and list */
+            }
+
+            /* Bold and italic text */
+            .note-content strong {
+                color: #2c3e50;
+                font-weight: 700;
+            }
+
+            .note-content em {
+                color: #7f8c8d;
+                font-style: italic;
+            }
+
+            /* Code blocks and inline code */
+            .note-content code {
+                background: #ecf0f1;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-family: "Courier New", monospace;
+                font-size: 1.2rem;
+            }
+
+            .note-content pre {
+                background: #2c3e50;
+                color: white;
+                padding: 20px;
+                border-radius: 8px;
+                overflow-x: auto;
+                margin: 15px 0;
+            }
+
+            .note-content pre code {
+                background: none;
+                padding: 0;
+                color: inherit;
+            }
+
+            /* Blockquotes */
+            .note-content blockquote {
+                border-left: 5px solid #df5727;
+                margin: 20px 0;
+                padding: 15px 20px;
+                background: #ecf0f1;
+                font-style: italic;
+            }
+
+            /* Hide sender attribution completely */
+            .note-content .sender-attribution {
+                display: none !important;
+            }
+
+            /* Multiple notes styling */
+            .note-item {
+                background: rgba(255, 255, 255, 0.95);
+                color: #333;
+                padding: 20px;
+                border-radius: 15px;
+                margin-bottom: 15px;
+                border-left: 4px solid #df5727;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .note-item:last-child {
+                margin-bottom: 0;
+            }
+
+            .note-meta {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+                font-size: 0.9rem;
+                opacity: 0.8;
+            }
+
+            .note-meta-right {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .note-sender {
+                font-weight: 600;
+                color: #192139;
+            }
+
+            .note-time {
+                font-size: 0.8rem;
+                color: #666;
+            }
+
+            .note-item-content {
+                font-size: 1.2rem;
+                line-height: 1.6;
+            }
+
+            @media (hover: none) and (pointer: coarse) {
+                .individual-delete-btn {
+                    width: 40px;
+                    height: 40px;
+                }
+
+                .single-note-container .individual-delete-btn {
+                    width: 44px;
+                    height: 44px;
+                }
+            }
+
+            /* Apply all your existing note content styles to note items */
+            .note-item-content h1 {
+                color: #2c3e50 !important;
+                font-size: 1.6rem !important;
+                margin: 12px 0 12px 0 !important;
+                padding: 0 !important;
+                border-bottom: 2px solid #640d5f !important;
+                padding-bottom: 4px !important;
+                display: block !important;
+                line-height: 1.1 !important;
+            }
+
+            .note-item-content h2 {
+                color: #2c3e50 !important;
+                font-size: 1.3rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border-bottom: 1px solid #95a5a6 !important;
+                padding-bottom: 1px !important;
+                display: block !important;
+                line-height: 1.1 !important;
+            }
+
+            .note-item-content h3 {
+                color: #2c3e50 !important;
+                font-size: 1.1rem !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: block !important;
+                line-height: 1.1 !important;
+            }
+
+            .note-item-content ul,
+            .note-item-content ol {
+                margin: 0 !important;
+                padding: 0 !important;
+                padding-left: 10px !important;
+                display: block !important;
+            }
+
+            .note-item-content li {
+                margin: 0 !important;
+                padding: 2px 4px !important;
+                font-size: 1.1rem !important;
+                line-height: 1.6 !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+                border-radius: 6px !important;
+                cursor: pointer !important;
+                transition: background-color 0.2s ease !important;
+                position: relative !important;
+            }
+
+            .note-item-content input[type="checkbox"] {
+                transform: scale(1.5) !important;
+                margin: 0 8px 4px 0 !important;
+                cursor: pointer !important;
+                vertical-align: middle !important;
+                pointer-events: auto !important;
+                flex-shrink: 0 !important;
+            }
+
+            .note-item-content ul {
+                list-style: none !important;
+                padding-left: 10px !important;
+                margin: 0 !important;
+            }
+
+            /* Pagination controls styling - keeping your existing styles */
+            .pagination {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 20px 0;
+                gap: 20px;
+                font-size: 1.2rem;
+            }
+
+            .pagination button {
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: background 0.3s;
+                font-size: 1.1rem;
+            }
+
+            .pagination button:hover:not(:disabled) {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            .pagination button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .pagination .page-info {
+                color: white;
+                font-weight: bold;
+                min-width: 80px;
+                text-align: center;
+            }
+
+            /* Horizontal rules */
+            .note-content hr,
+            .note-item-content hr {
+                border: none;
+                border-top: 2px solid #bdc3c7;
+                margin: 25px 0;
+            }
+
+            .controls {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 32px;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .refresh-btn {
+                background: #4caf50;
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .refresh-btn:hover {
+                background: #45a049;
+            }
+
+            .delete-btn {
+                background: #e74c3c;
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .delete-btn:hover {
+                background: #c0392b;
+            }
+
+            .setup-btn {
+                background: #2196f3;
+                color: white;
+                border: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-size: 1.2rem;
+                cursor: pointer;
+                transition: background 0.3s;
+            }
+
+            .setup-btn:hover {
+                background: #1976d2;
+            }
+            /* Individual delete button styling */
             .individual-delete-btn {
-                width: 40px;
-                height: 40px;
+                background: rgba(215, 214, 214, 0.8);
+                border: none;
+                border-radius: 50%;
+                width: 32px;
+                height: 32px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+                margin-left: 10px;
+                font-size: 18px;
+                line-height: 32px;
             }
-            
-            .single-note-container .individual-delete-btn {
-                width: 44px;
-                height: 44px;
-            }
-        }
-        
-        /* Apply all your existing note content styles to note items */
-        .note-item-content h1 {
-            color: #2c3e50 !important;
-            font-size: 1.6rem !important;
-            margin: 12px 0 12px 0 !important; 
-            padding: 0 !important;
-            border-bottom: 2px solid #640D5F !important;
-            padding-bottom: 4px !important;
-            display: block !important;
-            line-height: 1.1 !important;
-        }
-        
-        .note-item-content h2 {
-            color: #2c3e50 !important;
-            font-size: 1.3rem !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border-bottom: 1px solid #95a5a6 !important;
-            padding-bottom: 1px !important;
-            display: block !important;
-            line-height: 1.1 !important;
-        }
-        
-        .note-item-content h3 {
-            color: #2c3e50 !important;
-            font-size: 1.1rem !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-            line-height: 1.1 !important;
-        }
-        
-        .note-item-content ul, .note-item-content ol {
-            margin: 0 !important;
-            padding: 0 !important;
-            padding-left: 10px !important;
-            display: block !important;
-        }
-        
-        .note-item-content li {
-            margin: 0 !important;
-            padding: 2px 4px !important;
-            font-size: 1.1rem !important;
-            line-height: 1.6 !important;
-            align-items: flex-start !important;
-            gap: 8px !important;
-            border-radius: 6px !important;
-            cursor: pointer !important;
-            transition: background-color 0.2s ease !important;
-            position: relative !important;
-        }
-        
-        .note-item-content input[type="checkbox"] {
-            transform: scale(1.5) !important;
-            margin: 0 8px 4px 0 !important;
-            cursor: pointer !important;
-            vertical-align: middle !important;
-            pointer-events: auto !important;
-            flex-shrink: 0 !important;
-        }
-        
-        .note-item-content ul {
-            list-style: none !important;
-            padding-left: 10px !important;
-            margin: 0 !important;
-        }
-        
-        /* Pagination controls styling - keeping your existing styles */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-            gap: 20px;
-            font-size: 1.2rem;
-        }
-        
-        .pagination button {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background 0.3s;
-            font-size: 1.1rem;
-        }
-        
-        .pagination button:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        .pagination button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .pagination .page-info {
-            color: white;
-            font-weight: bold;
-            min-width: 80px;
-            text-align: center;
-        }
-        
-        /* Horizontal rules */
-        .note-content hr, .note-item-content hr {
-            border: none;
-            border-top: 2px solid #bdc3c7;
-            margin: 25px 0;
-        }
-        
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 32px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .refresh-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .refresh-btn:hover {
-            background: #45a049;
-        }
-        
-        .delete-btn {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .delete-btn:hover {
-            background: #c0392b;
-        }
-        
-        .setup-btn {
-            background: #2196F3;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .setup-btn:hover {
-            background: #1976D2;
-        }
-        /* Individual delete button styling */
-        .individual-delete-btn {
-            background: rgba(215, 214, 214, 0.8);
-            border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            margin-left: 10px;
-            font-size: 18px;
-            line-height: 32px;
-        }
-        
-        .individual-delete-btn:hover {
-            background: rgba(231, 76, 60, 1);
-            transform: scale(1.1);
-        }
-        
-        .individual-delete-btn:active {
-            transform: scale(0.95);
-        }
-        
-        /* For single note view - position delete button in top right */
-        .single-note-container {
-            position: relative;
-        }
-        
-        .single-note-container .individual-delete-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            z-index: 10;
-            width: 36px;
-            height: 36px;
-        }
-        .timestamp {
-            text-align: center;
-            margin-top: 15px;
-            opacity: 0.7;
-            font-size: 1rem;
-        }
-        
-        .connection-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        
-        .connected {
-            background: #4CAF50;
-            color: white;
-        }
-        
-        .disconnected {
-            background: #f44336;
-            color: white;
-        }
-        
-        .empty-state {
-            text-align: center;
-            opacity: 0.7;
-            font-style: italic;
-        }
-        
-        .no-notes {
-            text-align: center;
-            opacity: 0.7;
-            font-style: italic;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
-            border-radius: 15px;
-        }
 
-        .note-tag {
-            display: inline-block;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin: 5px 5px 5px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .note-tag:before {
-            content: '🏷️ ';
-            margin-right: 4px;
-        }
-
-        /* CELEBRATION OVERLAY STYLES - Add this to your CSS */
-
-        #celebration-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transform: scale(0.8);
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-        
-        #celebration-overlay.show {
-            opacity: 1;
-            transform: scale(1);
-        }
-        
-        #celebration-overlay.fade-out {
-            opacity: 0;
-            transform: scale(1.1);
-        }
-        
-        .celebration-content {
-            text-align: center;
-            color: white;
-            z-index: 2;
-        }
-        
-        .big-checkmark {
-            font-size: 8rem;
-            color: #4CAF50;
-            margin-bottom: 20px;
-            animation: checkmark-bounce 0.6s ease-out;
-            text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
-        }
-        
-        .celebration-text {
-            font-size: 4rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            animation: text-pulse 0.8s ease-out 0.3s both;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-        }
-        
-        .celebration-subtext {
-            font-size: 1.8rem;
-            opacity: 0.9;
-            animation: fade-in-up 0.6s ease-out 0.6s both;
-        }
-        
-        /* Checkmark bounce animation */
-        @keyframes checkmark-bounce {
-            0% {
-                transform: scale(0) rotate(-180deg);
-                opacity: 0;
-            }
-            50% {
-                transform: scale(1.2) rotate(-10deg);
-            }
-            100% {
-                transform: scale(1) rotate(0deg);
-                opacity: 1;
-            }
-        }
-        
-        /* Text pulse animation */
-        @keyframes text-pulse {
-            0% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-            50% {
+            .individual-delete-btn:hover {
+                background: rgba(231, 76, 60, 1);
                 transform: scale(1.1);
             }
-            100% {
+
+            .individual-delete-btn:active {
+                transform: scale(0.95);
+            }
+
+            /* For single note view - position delete button in top right */
+            .single-note-container {
+                position: relative;
+            }
+
+            .single-note-container .individual-delete-btn {
+                position: absolute;
+                top: 15px;
+                right: 15px;
+                z-index: 10;
+                width: 36px;
+                height: 36px;
+            }
+            .timestamp {
+                text-align: center;
+                margin-top: 15px;
+                opacity: 0.7;
+                font-size: 1rem;
+            }
+
+            .connection-status {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 15px;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                font-weight: bold;
+            }
+
+            .connected {
+                background: #4caf50;
+                color: white;
+            }
+
+            .disconnected {
+                background: #f44336;
+                color: white;
+            }
+
+            .empty-state {
+                text-align: center;
+                opacity: 0.7;
+                font-style: italic;
+            }
+
+            .no-notes {
+                text-align: center;
+                opacity: 0.7;
+                font-style: italic;
+                padding: 40px;
+                background: rgba(255, 255, 255, 0.9);
+                color: #333;
+                border-radius: 15px;
+            }
+
+            .note-tag {
+                display: inline-block;
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                color: white;
+                padding: 4px 12px;
+                border-radius: 15px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin: 5px 5px 5px 0;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            }
+
+            .note-tag:before {
+                content: "🏷️ ";
+                margin-right: 4px;
+            }
+
+            /* CELEBRATION OVERLAY STYLES - Add this to your CSS */
+
+            #celebration-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(5px);
+                z-index: 9999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transform: scale(0.8);
+                transition: all 0.3s ease;
+                pointer-events: none;
+            }
+
+            #celebration-overlay.show {
+                opacity: 1;
                 transform: scale(1);
-                opacity: 1;
             }
-        }
-        
-        /* Fade in up animation */
-        @keyframes fade-in-up {
-            0% {
-                transform: translateY(30px);
+
+            #celebration-overlay.fade-out {
                 opacity: 0;
+                transform: scale(1.1);
             }
-            100% {
-                transform: translateY(0);
-                opacity: 1;
+
+            .celebration-content {
+                text-align: center;
+                color: white;
+                z-index: 2;
             }
-        }
-        
-        /* Confetti container */
-        .confetti-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 1;
-        }
-        
-        /* Confetti pieces */
-        .confetti-piece {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            top: -10px;
-            animation: confetti-fall linear forwards;
-        }
-        
-        .confetti-piece.square {
-            /* Square is default */
-        }
-        
-        .confetti-piece.circle {
-            border-radius: 50%;
-        }
-        
-        .confetti-piece.triangle {
-            width: 0;
-            height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-bottom: 10px solid;
-            background: transparent !important;
-        }
-        
-        /* Confetti falling animation */
-        @keyframes confetti-fall {
-            0% {
-                transform: translateY(-100vh) rotate(0deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(100vh) rotate(720deg);
-                opacity: 0;
-            }
-        }
-        
-        /* Enhanced task completion styles */
-        .note-content input[type="checkbox"]:checked + *,
-        .note-item-content input[type="checkbox"]:checked + * {
-            text-decoration: line-through;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-        }
-        
-        /* Smooth checkbox animations */
-        .note-content input[type="checkbox"],
-        .note-item-content input[type="checkbox"] {
-            transition: transform 0.2s ease;
-        }
-        
-        .note-content input[type="checkbox"]:checked,
-        .note-item-content input[type="checkbox"]:checked {
-            transform: scale(1.1);
-        }
-        
-        /* Touch-friendly task interaction */
-        .note-content li:active,
-        .note-item-content li:active {
-            transform: scale(0.98);
-            transition: transform 0.1s ease;
-        }
-        
-        /* Responsive celebration for smaller screens */
-        @media (max-width: 768px) {
+
             .big-checkmark {
-                font-size: 6rem;
+                font-size: 8rem;
+                color: #4caf50;
+                margin-bottom: 20px;
+                animation: checkmark-bounce 0.6s ease-out;
+                text-shadow: 0 0 20px rgba(76, 175, 80, 0.5);
             }
-            
+
             .celebration-text {
-                font-size: 3rem;
+                font-size: 4rem;
+                font-weight: bold;
+                margin-bottom: 10px;
+                animation: text-pulse 0.8s ease-out 0.3s both;
+                text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
             }
-            
+
             .celebration-subtext {
-                font-size: 1.4rem;
+                font-size: 1.8rem;
+                opacity: 0.9;
+                animation: fade-in-up 0.6s ease-out 0.6s both;
             }
-        }
-        /* COMPLETED NOTES STYLING */
-        .note-item.completed-note {
-            opacity: 0.75;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 255, 255, 0.95));
-            border-left: 4px solid #4CAF50;
-            transform: scale(0.98);
-            transition: all 0.3s ease;
-        }
-        
-        .note-content.completed-note {
-            opacity: 0.8;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 255, 255, 0.9));
-            border: 2px solid #4CAF50;
-            transform: scale(0.98);
-            transition: all 0.3s ease;
-        }
-        
-        .completion-badge {
-            background: #4CAF50;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            margin-right: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .note-item.completed-note:hover {
-            opacity: 0.9;
-            transform: scale(1);
-        }
-        
-        .note-content.completed-note:hover {
-            opacity: 0.95;
-            transform: scale(1);
-        }
-        
-        .note-item.completed-note {
-            animation: complete-bounce 0.5s ease-out;
-        }
-        
-        @keyframes complete-bounce {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(0.98); }
-        }
-        
-        .completed-note input[type="checkbox"]:checked {
-            transform: scale(1.2);
-            filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.6));
-        }
-        
-        .completed-note li {
-            text-decoration: line-through;
-            opacity: 0.8;
-            background-color: rgba(76, 175, 80, 0.1) !important;
-        }
 
-        /* Enhanced note header styling */
-        .note-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #640D5F;
-        }
-        
-        .note-title {
-            color: #2c3e50 !important;
-            font-size: 1.6rem !important;
-            font-weight: 600 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            line-height: 1.2 !important;
-            flex-grow: 1;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* Update note-meta-right for the new header structure */
-        .note-header .note-meta-right {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        
-        /* Ensure completed notes have a green title underline */
-        .completed-note .note-header {
-            border-bottom: 2px solid #4CAF50;
-        }
-        
-        .completed-note .note-title {
-            color: #2c3e50 !important;
-        }
-        
-        /* Remove the old note-meta styling since we're replacing it */
-        .note-meta {
-            display: none;
-        }
-        
-        /* Responsive title sizing */
-        @media (max-width: 768px) {
+            /* Checkmark bounce animation */
+            @keyframes checkmark-bounce {
+                0% {
+                    transform: scale(0) rotate(-180deg);
+                    opacity: 0;
+                }
+                50% {
+                    transform: scale(1.2) rotate(-10deg);
+                }
+                100% {
+                    transform: scale(1) rotate(0deg);
+                    opacity: 1;
+                }
+            }
+
+            /* Text pulse animation */
+            @keyframes text-pulse {
+                0% {
+                    transform: scale(0.8);
+                    opacity: 0;
+                }
+                50% {
+                    transform: scale(1.1);
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            /* Fade in up animation */
+            @keyframes fade-in-up {
+                0% {
+                    transform: translateY(30px);
+                    opacity: 0;
+                }
+                100% {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            /* Confetti container */
+            .confetti-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                pointer-events: none;
+                z-index: 1;
+            }
+
+            /* Confetti pieces */
+            .confetti-piece {
+                position: absolute;
+                width: 10px;
+                height: 10px;
+                top: -10px;
+                animation: confetti-fall linear forwards;
+            }
+
+            .confetti-piece.square {
+                /* Square is default */
+            }
+
+            .confetti-piece.circle {
+                border-radius: 50%;
+            }
+
+            .confetti-piece.triangle {
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-bottom: 10px solid;
+                background: transparent !important;
+            }
+
+            /* Confetti falling animation */
+            @keyframes confetti-fall {
+                0% {
+                    transform: translateY(-100vh) rotate(0deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: translateY(100vh) rotate(720deg);
+                    opacity: 0;
+                }
+            }
+
+            /* Enhanced task completion styles */
+            .note-content input[type="checkbox"]:checked + *,
+            .note-item-content input[type="checkbox"]:checked + * {
+                text-decoration: line-through;
+                opacity: 0.7;
+                transition: all 0.3s ease;
+            }
+
+            /* Smooth checkbox animations */
+            .note-content input[type="checkbox"],
+            .note-item-content input[type="checkbox"] {
+                transition: transform 0.2s ease;
+            }
+
+            .note-content input[type="checkbox"]:checked,
+            .note-item-content input[type="checkbox"]:checked {
+                transform: scale(1.1);
+            }
+
+            /* Touch-friendly task interaction */
+            .note-content li:active,
+            .note-item-content li:active {
+                transform: scale(0.98);
+                transition: transform 0.1s ease;
+            }
+
+            /* Responsive celebration for smaller screens */
+            @media (max-width: 768px) {
+                .big-checkmark {
+                    font-size: 6rem;
+                }
+
+                .celebration-text {
+                    font-size: 3rem;
+                }
+
+                .celebration-subtext {
+                    font-size: 1.4rem;
+                }
+            }
+            /* COMPLETED NOTES STYLING */
+            .note-item.completed-note {
+                opacity: 0.75;
+                background: linear-gradient(
+                    135deg,
+                    rgba(76, 175, 80, 0.1),
+                    rgba(255, 255, 255, 0.95)
+                );
+                border-left: 4px solid #4caf50;
+                transform: scale(0.98);
+                transition: all 0.3s ease;
+            }
+
+            .note-content.completed-note {
+                opacity: 0.8;
+                background: linear-gradient(
+                    135deg,
+                    rgba(76, 175, 80, 0.1),
+                    rgba(255, 255, 255, 0.9)
+                );
+                border: 2px solid #4caf50;
+                transform: scale(0.98);
+                transition: all 0.3s ease;
+            }
+
+            .completion-badge {
+                background: #4caf50;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: bold;
+                margin-right: 8px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .note-item.completed-note:hover {
+                opacity: 0.9;
+                transform: scale(1);
+            }
+
+            .note-content.completed-note:hover {
+                opacity: 0.95;
+                transform: scale(1);
+            }
+
+            .note-item.completed-note {
+                animation: complete-bounce 0.5s ease-out;
+            }
+
+            @keyframes complete-bounce {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.02);
+                }
+                100% {
+                    transform: scale(0.98);
+                }
+            }
+
+            .completed-note input[type="checkbox"]:checked {
+                transform: scale(1.2);
+                filter: drop-shadow(0 0 4px rgba(76, 175, 80, 0.6));
+            }
+
+            .completed-note li {
+                text-decoration: line-through;
+                opacity: 0.8;
+                background-color: rgba(76, 175, 80, 0.1) !important;
+            }
+
+            /* Enhanced note header styling */
+            .note-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+                padding-bottom: 8px;
+                border-bottom: 2px solid #640d5f;
+            }
+
             .note-title {
-                font-size: 1.4rem !important;
+                color: #2c3e50 !important;
+                font-size: 1.6rem !important;
+                font-weight: 600 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 1.2 !important;
+                flex-grow: 1;
+                text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
             }
-        }
 
-        /* Material Design Tabs */
-        .tabs-container {
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .tabs {
-            display: flex;
-            position: relative;
-            background: none;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        
-        .tabs::-webkit-scrollbar {
-            display: none;
-        }
-        
-        .tab {
-            flex: 1;
-            min-width: 0;
-            padding: 16px 20px;
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.95rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .tab:hover {
-            color: rgba(255, 255, 255, 0.9);
-            background: rgba(255, 255, 255, 0.05);
-        }
-        
-        .tab.active {
-            color: white;
-            font-weight: 600;
-        }
-        
-        /* Tab underline indicators with different colors */
-        .tab::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: transparent;
-            transition: all 0.3s ease;
-            transform: scaleX(0);
-            transform-origin: center;
-        }
-        
-        .tab.active::after {
-            transform: scaleX(1);
-        }
-        
-        /* Different colors for each tab */
-        .tab[data-tab="all"].active::after {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-        }
-        
-        .tab[data-tab="dad"].active::after {
-            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
-        }
-        
-        .tab[data-tab="mom"].active::after {
-            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
-        }
-        
-        .tab[data-tab="jess"].active::after {
-            background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
-        }
-        
-        /* Ripple effect on tab click */
-        .tab {
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .tab::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
-        .tab:active::before {
-            width: 300px;
-            height: 300px;
-        }
-        
-        /* Badge styling for counts */
-        .tab .badge {
-            display: inline-block;
-            margin-left: 6px;
-            padding: 2px 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            min-width: 18px;
-            text-align: center;
-        }
-        
-        .tab.active .badge {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Responsive tabs */
-        @media (max-width: 768px) {
+            /* Update note-meta-right for the new header structure */
+            .note-header .note-meta-right {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-shrink: 0;
+            }
+
+            /* Ensure completed notes have a green title underline */
+            .completed-note .note-header {
+                border-bottom: 2px solid #4caf50;
+            }
+
+            .completed-note .note-title {
+                color: #2c3e50 !important;
+            }
+
+            /* Remove the old note-meta styling since we're replacing it */
+            .note-meta {
+                display: none;
+            }
+
+            /* Responsive title sizing */
+            @media (max-width: 768px) {
+                .note-title {
+                    font-size: 1.4rem !important;
+                }
+            }
+
+            /* Material Design Tabs */
+            .tabs-container {
+                margin-bottom: 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .tabs {
+                display: flex;
+                position: relative;
+                background: none;
+                overflow-x: auto;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+
+            .tabs::-webkit-scrollbar {
+                display: none;
+            }
+
             .tab {
-                padding: 14px 16px;
-                font-size: 0.85rem;
+                flex: 1;
+                min-width: 0;
+                padding: 16px 20px;
+                background: none;
+                border: none;
+                color: rgba(255, 255, 255, 0.7);
+                font-size: 0.95rem;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                position: relative;
+                text-align: center;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
-            
-            .tab .badge {
-                font-size: 0.7rem;
-                padding: 1px 4px;
-                margin-left: 4px;
-            }
-        }
-        
-        /* Tab content area */
-        .tab-content {
-            margin-top: 20px;
-        }
-        
-    </style>
-</head>
-<body>
-    <!-- <div class="connection-status" id="connectionStatus">Connecting...</div> -->
-    
-    <div class="container">
-        <div class="header">
-            <div class="app-title">
-                <svg id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84.44 90" class="magnet-logo">
-                  <defs>
-                    <style>
-                      .cls-1 {
-                        fill: #fff;
-                      }
-                    </style>
-                  </defs>
-                  <g id="Layer_1-2" data-name="Layer 1">
-                    <g>
-                      <path class="cls-1" d="M71.72,40.6l-23.85,26.11c-3.54,3.87-8.51,6.09-13.65,6.09-4.31,0-8.4-1.57-11.51-4.41-7.1-6.49-7.37-17.8-.6-25.21l23.85-26.11-12.72-11.62L9.39,31.55c-3.2,3.5-5.63,7.52-7.24,11.94C.6,47.77-.12,52.24.02,56.78c.14,4.56,1.14,8.96,2.97,13.08,1.91,4.3,4.64,8.08,8.1,11.25,3.47,3.17,7.48,5.54,11.93,7.06,3.59,1.22,7.35,1.84,11.16,1.84.7,0,1.42-.02,2.13-.06,4.53-.27,8.92-1.39,13.04-3.32,4.26-2,8.04-4.79,11.24-8.29l23.85-26.11-12.72-11.62ZM33.48,10.72l7.2,6.58-7.29,7.98-7.2-6.58,7.29-7.98ZM64.67,53.86l7.29-7.98,7.2,6.58-7.29,7.98-7.2-6.58Z"/>
-                      <polygon class="cls-1" points="84.44 0 53.15 20.19 61.94 24.03 43.94 41.27 77.79 22.82 67.89 18.49 84.44 0"/>
-                    </g>
-                  </g>
-                </svg>
-                <h1>Magnet Notes</h1>
-            </div>
-            <button class="info-button" onclick="toggleInfo()">
-                <img src="img/info-icon-24.png" alt="info icon">
-            </button>
-            
-            <!-- Info popup - now properly styled and hidden by default -->
-            <div class="info-popup" id="infoPopup">
-                <h3>Magnet Fridge Info</h3>
-                <p><strong>📧 Email:</strong> <span id="fridgeEmailInfo">Loading...</span></p>
-                <p><strong>🆔 Fridge ID:</strong> <span id="fridgeIdInfo">Loading...</span></p>
-                <p><strong>📱 How to use:</strong> Share any note from your iPhone using "Shortcuts" → "Send to Coolio"</p>
-                <p><strong>🔄 Auto-refresh:</strong> <span id="refreshStatus">Checking every 2 minutes</span></p>
-                <button class="close-btn" onclick="toggleInfo()">Close</button>
-            </div>
-        </div>
-        
-        <div class="status" id="status">
-            <span id="statusText">Starting system...</span>
-            <span id="countdown" style="opacity: 0.7; font-size: 0.9em;"></span>
-        </div>
 
-        <!-- Add this right after the status div and before notesContainer -->
-        <div class="tabs-container">
-            <div class="tabs">
-                <button class="tab active" id="tab-all" data-tab="all" onclick="switchToTab('all')">
-                    All
+            .tab:hover {
+                color: rgba(255, 255, 255, 0.9);
+                background: rgba(255, 255, 255, 0.05);
+            }
+
+            .tab.active {
+                color: white;
+                font-weight: 600;
+            }
+
+            /* Tab underline indicators with different colors */
+            .tab::after {
+                content: "";
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 3px;
+                background: transparent;
+                transition: all 0.3s ease;
+                transform: scaleX(0);
+                transform-origin: center;
+            }
+
+            .tab.active::after {
+                transform: scaleX(1);
+            }
+
+            /* Different colors for each tab */
+            .tab[data-tab="all"].active::after {
+                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            }
+
+            .tab[data-tab="dad"].active::after {
+                background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            }
+
+            .tab[data-tab="mom"].active::after {
+                background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+            }
+
+            .tab[data-tab="jess"].active::after {
+                background: linear-gradient(90deg, #a8edea 0%, #fed6e3 100%);
+            }
+
+            /* Ripple effect on tab click */
+            .tab {
+                overflow: hidden;
+                position: relative;
+            }
+
+            .tab::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 0;
+                height: 0;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                transform: translate(-50%, -50%);
+                transition:
+                    width 0.6s,
+                    height 0.6s;
+            }
+
+            .tab:active::before {
+                width: 300px;
+                height: 300px;
+            }
+
+            /* Badge styling for counts */
+            .tab .badge {
+                display: inline-block;
+                margin-left: 6px;
+                padding: 2px 6px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                min-width: 18px;
+                text-align: center;
+            }
+
+            .tab.active .badge {
+                background: rgba(255, 255, 255, 0.3);
+            }
+
+            /* Responsive tabs */
+            @media (max-width: 768px) {
+                .tab {
+                    padding: 14px 16px;
+                    font-size: 0.85rem;
+                }
+
+                .tab .badge {
+                    font-size: 0.7rem;
+                    padding: 1px 4px;
+                    margin-left: 4px;
+                }
+            }
+
+            /* Tab content area */
+            .tab-content {
+                margin-top: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- <div class="connection-status" id="connectionStatus">Connecting...</div> -->
+
+        <div class="container">
+            <div class="header">
+                <div class="app-title">
+                    <svg
+                        id="Layer_2"
+                        data-name="Layer 2"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 84.44 90"
+                        class="magnet-logo"
+                    >
+                        <defs>
+                            <style>
+                                .cls-1 {
+                                    fill: #fff;
+                                }
+                            </style>
+                        </defs>
+                        <g id="Layer_1-2" data-name="Layer 1">
+                            <g>
+                                <path
+                                    class="cls-1"
+                                    d="M71.72,40.6l-23.85,26.11c-3.54,3.87-8.51,6.09-13.65,6.09-4.31,0-8.4-1.57-11.51-4.41-7.1-6.49-7.37-17.8-.6-25.21l23.85-26.11-12.72-11.62L9.39,31.55c-3.2,3.5-5.63,7.52-7.24,11.94C.6,47.77-.12,52.24.02,56.78c.14,4.56,1.14,8.96,2.97,13.08,1.91,4.3,4.64,8.08,8.1,11.25,3.47,3.17,7.48,5.54,11.93,7.06,3.59,1.22,7.35,1.84,11.16,1.84.7,0,1.42-.02,2.13-.06,4.53-.27,8.92-1.39,13.04-3.32,4.26-2,8.04-4.79,11.24-8.29l23.85-26.11-12.72-11.62ZM33.48,10.72l7.2,6.58-7.29,7.98-7.2-6.58,7.29-7.98ZM64.67,53.86l7.29-7.98,7.2,6.58-7.29,7.98-7.2-6.58Z"
+                                />
+                                <polygon
+                                    class="cls-1"
+                                    points="84.44 0 53.15 20.19 61.94 24.03 43.94 41.27 77.79 22.82 67.89 18.49 84.44 0"
+                                />
+                            </g>
+                        </g>
+                    </svg>
+                    <h1>Magnet Notes</h1>
+                </div>
+                <button class="info-button" onclick="toggleInfo()">
+                    <img src="img/info-icon-24.png" alt="info icon" />
                 </button>
-                <button class="tab" id="tab-dad" data-tab="dad" onclick="switchToTab('dad')">
-                    Dad
-                </button>
-                <button class="tab" id="tab-mom" data-tab="mom" onclick="switchToTab('mom')">
-                    Mom
-                </button>
-                <button class="tab" id="tab-jess" data-tab="jess" onclick="switchToTab('jess')">
-                    Jess
-                </button>
-            </div>
-        </div>
-        
-        <div id="notesContainer">
-            <div class="note-content">
-                <div class="empty-state">
-                    📱 Waiting for your first note...<br><br>
-                    Send an email to the address above to see it here!
+
+                <!-- Info popup - now properly styled and hidden by default -->
+                <div class="info-popup" id="infoPopup">
+                    <h3>Magnet Fridge Info</h3>
+                    <p>
+                        <strong>📧 Email:</strong>
+                        <span id="fridgeEmailInfo">Loading...</span>
+                    </p>
+                    <p>
+                        <strong>🆔 Fridge ID:</strong>
+                        <span id="fridgeIdInfo">Loading...</span>
+                    </p>
+                    <p>
+                        <strong>📱 How to use:</strong> Share any note from your
+                        iPhone using "Shortcuts" → "Send to Coolio"
+                    </p>
+                    <p>
+                        <strong>🔄 Auto-refresh:</strong>
+                        <span id="refreshStatus">Checking every 2 minutes</span>
+                    </p>
+                    <button class="close-btn" onclick="toggleInfo()">
+                        Close
+                    </button>
                 </div>
             </div>
-        </div>
-        
-        <!-- Pagination controls -->
-        <div class="pagination" id="pagination" style="display: none;">
-            <button id="prevBtn" onclick="changePage(-1)">‹ Prev</button>
-            <div class="page-info" id="pageInfo">1 of 1</div>
-            <button id="nextBtn" onclick="changePage(1)">Next ›</button>
-        </div>
-        
-        <div class="controls">
-            <button class="refresh-btn" onclick="fetchNote()">
-                <img src="img/refresh-icon-24.png" alt="refresh icon" height="16px">
-                Refresh Note
-            </button>
-            <button class="delete-btn" onclick="deleteNote()">
-                <img src="img/delete-icon-24.png" alt="delete icon" height="16px">
-                Delete All
-            </button>
-            <!-- <button class="setup-btn" onclick="goToSetup()">
+
+            <div class="status" id="status">
+                <span id="statusText">Starting system...</span>
+                <span
+                    id="countdown"
+                    style="opacity: 0.7; font-size: 0.9em"
+                ></span>
+            </div>
+
+            <!-- Add this right after the status div and before notesContainer -->
+            <div class="tabs-container">
+                <div class="tabs">
+                    <button
+                        class="tab active"
+                        id="tab-all"
+                        data-tab="all"
+                        onclick="switchToTab('all')"
+                    >
+                        All
+                    </button>
+                    <button
+                        class="tab"
+                        id="tab-dad"
+                        data-tab="dad"
+                        onclick="switchToTab('dad')"
+                    >
+                        Dad
+                    </button>
+                    <button
+                        class="tab"
+                        id="tab-mom"
+                        data-tab="mom"
+                        onclick="switchToTab('mom')"
+                    >
+                        Mom
+                    </button>
+                    <button
+                        class="tab"
+                        id="tab-jess"
+                        data-tab="jess"
+                        onclick="switchToTab('jess')"
+                    >
+                        Jess
+                    </button>
+                </div>
+            </div>
+
+            <div id="notesContainer">
+                <div class="note-content">
+                    <div class="empty-state">
+                        📱 Waiting for your first note...<br /><br />
+                        Send an email to the address above to see it here!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination controls -->
+            <div class="pagination" id="pagination" style="display: none">
+                <button id="prevBtn" onclick="changePage(-1)">‹ Prev</button>
+                <div class="page-info" id="pageInfo">1 of 1</div>
+                <button id="nextBtn" onclick="changePage(1)">Next ›</button>
+            </div>
+
+            <div class="controls">
+                <button class="refresh-btn" onclick="fetchNote()">
+                    <img
+                        src="img/refresh-icon-24.png"
+                        alt="refresh icon"
+                        height="16px"
+                    />
+                    Refresh Note
+                </button>
+                <button class="delete-btn" onclick="deleteNote()">
+                    <img
+                        src="img/delete-icon-24.png"
+                        alt="delete icon"
+                        height="16px"
+                    />
+                    Delete All
+                </button>
+                <!-- <button class="setup-btn" onclick="goToSetup()">
                 <span class="material-symbols-outlined">settings</span> Change Fridge
             </button> -->
+            </div>
+
+            <div class="timestamp" id="timestamp"></div>
         </div>
-        
-        <div class="timestamp" id="timestamp"></div>
-    </div>
 
-    <script>
-        
-        // Scripts go here
+        <script>
+            // Scripts go here
+        </script>
 
-    </script>
-    
-    <script type="text/javascript" src="tada.js"></script>
-</body>
+        <script type="module" src="tada.js"></script>
+    </body>
 </html>
