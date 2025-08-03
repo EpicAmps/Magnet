@@ -328,11 +328,13 @@ function renderCurrentPage() {
     return;
   }
 
-  // ALWAYS use the card layout for consistency - even for single notes
+  // Render notes
   var html = "";
   for (var i = 0; i < currentNotes.length; i++) {
     var note = currentNotes[i];
-    var noteIndex = allNotes.indexOf(note); // Get original index for delete function
+    var noteIndex = allNotes.indexOf(note); // CRITICAL: Use the actual index in allNotes
+
+    // FIXED: Create delete button with correct parameters
     var deleteBtn =
       '<button class="individual-delete-btn" onclick="deleteIndividualNote(' +
       noteIndex +
@@ -348,7 +350,6 @@ function renderCurrentPage() {
       completionBadge = '<span class="completion-badge">✓ Completed</span>';
     }
 
-    // Extract dynamic title from note content and get cleaned content
     var titleData = extractAndCleanNoteTitle(note.content);
     var noteTitle = titleData.title;
     var cleanedContent = titleData.content;
@@ -356,6 +357,8 @@ function renderCurrentPage() {
     html +=
       '<div class="' +
       noteClass +
+      '" data-note-index="' +
+      i +
       '">' +
       '<div class="note-header">' +
       '<h2 class="note-title">' +
@@ -374,6 +377,7 @@ function renderCurrentPage() {
       "</div>" +
       "</div>";
   }
+
   notesContainer.innerHTML = html;
 }
 
@@ -635,6 +639,9 @@ function deleteNote() {
         // Hide pagination
         document.getElementById("pagination").style.display = "none";
 
+        // Update tabs
+        updateTabCounts();
+
         // Update status and timestamp
         document.getElementById("statusText").textContent =
           "✅ All notes deleted!";
@@ -668,12 +675,13 @@ function deleteIndividualNote(noteIndex, noteId) {
     return;
   }
 
-  // Calculate the actual index in the allNotes array
-  var actualIndex = currentPage * notesPerPage + noteIndex;
-  var noteToDelete = allNotes[actualIndex];
+  console.log("Deleting individual note:", { noteIndex, noteId });
+
+  // Find the actual note in allNotes array
+  var noteToDelete = allNotes[noteIndex];
 
   if (!noteToDelete) {
-    console.error("Note not found at index:", actualIndex);
+    console.error("Note not found at index:", noteIndex);
     return;
   }
 
@@ -692,11 +700,14 @@ function deleteIndividualNote(noteIndex, noteId) {
   })
     .then(function (response) {
       if (response.ok) {
+        console.log("Successfully deleted note from backend");
+
         // Remove note from frontend array
-        allNotes.splice(actualIndex, 1);
+        allNotes.splice(noteIndex, 1);
 
         // Adjust current page if we deleted the last note on this page
-        var totalPages = Math.ceil(allNotes.length / notesPerPage);
+        var filteredNotes = filterNotesByTab(allNotes);
+        var totalPages = Math.ceil(filteredNotes.length / notesPerPage);
         if (currentPage >= totalPages && currentPage > 0) {
           currentPage = totalPages - 1;
         }
@@ -712,6 +723,8 @@ function deleteIndividualNote(noteIndex, noteId) {
         } else {
           renderCurrentPage();
           updatePagination();
+          updateTabCounts(); // Update tab counts after deletion
+
           var totalNotes = allNotes.length;
           document.getElementById("statusText").textContent =
             "✅ Note deleted! " +
@@ -1345,6 +1358,29 @@ function debugCheckboxStates() {
     })),
   );
 }
+
+// DEBUG: Test delete function availability
+function testDeleteFunctions() {
+  console.log("=== DELETE FUNCTIONS TEST ===");
+  console.log("deleteNote function exists:", typeof deleteNote);
+  console.log(
+    "deleteIndividualNote function exists:",
+    typeof deleteIndividualNote,
+  );
+  console.log("Current allNotes:", allNotes.length);
+
+  if (allNotes.length > 0) {
+    console.log("First note for testing:", {
+      index: 0,
+      id: allNotes[0].id,
+      timestamp: allNotes[0].timestamp,
+    });
+  }
+}
+
+// Make test function available
+window.testDeleteFunctions = testDeleteFunctions;
+console.log("🔧 Added testDeleteFunctions() to console");
 
 // Make debug function available in console
 window.debugCheckboxStates = debugCheckboxStates;
