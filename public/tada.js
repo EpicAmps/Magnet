@@ -614,13 +614,15 @@ function deleteNote() {
   document.getElementById("statusText").textContent =
     "🗑️ Deleting all notes...";
 
-  fetch(API_BASE + "/api/note", {
+  // FIX: Add fridgeId to the URL query string
+  fetch(API_BASE + "/api/note?fridgeId=" + fridgeId, {
+    // ← ADD THIS
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      fridgeId: fridgeId,
+      fridgeId: fridgeId, // Also keep in body for redundancy
       deleteAll: true,
     }),
   })
@@ -687,13 +689,15 @@ function deleteIndividualNote(noteIndex, noteId) {
 
   document.getElementById("statusText").textContent = "🗑️ Deleting note...";
 
-  fetch(API_BASE + "/api/note", {
+  // FIX: Add fridgeId to the URL query string
+  fetch(API_BASE + "/api/note?fridgeId=" + fridgeId, {
+    // ← ADD THIS
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      fridgeId: fridgeId,
+      fridgeId: fridgeId, // Also keep in body for redundancy
       noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
       deleteAll: false,
     }),
@@ -767,6 +771,27 @@ function findNoteIndexFromElement(noteElement) {
   }
 
   return -1;
+}
+
+function testFixedDeleteRequests() {
+  console.log("=== TESTING FIXED DELETE REQUESTS ===");
+
+  // Test delete all URL
+  const deleteAllUrl = API_BASE + "/api/note?fridgeId=" + fridgeId;
+  console.log("Delete All URL:", deleteAllUrl);
+
+  // Test individual delete URL
+  if (allNotes.length > 0) {
+    const firstNote = allNotes[0];
+    const deleteIndividualUrl = API_BASE + "/api/note?fridgeId=" + fridgeId;
+    console.log("Delete Individual URL:", deleteIndividualUrl);
+    console.log("Note to delete:", {
+      id: firstNote.id,
+      timestamp: firstNote.timestamp,
+    });
+  }
+
+  console.log("Current fridgeId:", fridgeId);
 }
 
 // Task interaction setup
@@ -1452,8 +1477,10 @@ window.debugCheckboxStates = debugCheckboxStates;
 window.testDeleteFunctions = testDeleteFunctions;
 window.testCheckboxFix = testCheckboxFix;
 window.testManualRefresh = testManualRefresh;
+window.testFixedDeleteRequests = testFixedDeleteRequests;
 
 console.log("🔧 Added testDeleteFunctions() to console");
+console.log("🔧 Run testFixedDeleteRequests() to verify delete URLs");
 console.log("🔧 Added debugCheckboxStates() function to console");
 console.log(
   "🔧 Debug functions available: testCheckboxFix(), testManualRefresh()",
