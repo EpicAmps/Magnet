@@ -247,7 +247,7 @@ async function cleanupOldNotes(fridgeId) {
       }
       console.log(`Cleaned up ${notesToDelete.length} old notes`);
     }
-  } catch error) {
+  } catch (error) {
     console.log("Cleanup failed (non-critical):", error.message);
   }
 }
