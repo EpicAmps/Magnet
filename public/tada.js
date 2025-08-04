@@ -1527,6 +1527,214 @@ function testWebhookStatus() {
     });
 }
 
+// Add these debug functions to your tada.js file
+// Insert these at the end of your tada.js file
+
+// 🔧 COMPREHENSIVE DEBUG FUNCTIONS
+
+function debugFirebaseTimestamps() {
+  console.log("=== FIREBASE TIMESTAMP DEBUG ===");
+
+  if (allNotes.length > 0) {
+    console.log("Sample note timestamps:");
+    allNotes.slice(0, 3).forEach((note, index) => {
+      console.log(`Note ${index}:`, {
+        id: note.id,
+        timestamp: note.timestamp,
+        timestampType: typeof note.timestamp,
+        isNumber: typeof note.timestamp === 'number',
+        asDate: new Date(note.timestamp),
+        readable: new Date(note.timestamp).toISOString()
+      });
+    });
+  }
+
+  console.log("lastUpdate:", {
+    value: lastUpdate,
+    type: typeof lastUpdate,
+    asDate: new Date(lastUpdate),
+    readable: new Date(lastUpdate).toISOString()
+  });
+}
+
+function testApiResponse() {
+  console.log("=== API RESPONSE TEST ===");
+  console.log("Making fresh API call to debug response format...");
+
+  const testUrl = API_BASE + "/api/note?fridgeId=" + fridgeId + "&debug=1&t=" + Date.now();
+  console.log("Test URL:", testUrl);
+
+  fetch(testUrl)
+    .then(response => {
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+      return response.json();
+    })
+    .then(data => {
+      console.log("=== RAW API RESPONSE ===");
+      console.log("Full response:", JSON.stringify(data, null, 2));
+
+      if (data.notes) {
+        console.log("Notes array length:", data.notes.length);
+
+        if (data.notes.length > 0) {
+          console.log("=== FIRST NOTE ANALYSIS ===");
+          const firstNote = data.notes[0];
+          console.log("First note:", firstNote);
+          console.log("Timestamp analysis:", {
+            timestamp: firstNote.timestamp,
+            type: typeof firstNote.timestamp,
+            isNumber: typeof firstNote.timestamp === 'number',
+            isFirestoreTimestamp: firstNote.timestamp && typeof firstNote.timestamp === 'object' && firstNote.timestamp.toMillis,
+            currentTime: Date.now(),
+            comparison: firstNote.timestamp > lastUpdate
+          });
+
+          // Test if it's a Firestore timestamp object
+          if (firstNote.timestamp && typeof firstNote.timestamp === 'object' && firstNote.timestamp.toMillis) {
+            console.log("🔥 FOUND FIRESTORE TIMESTAMP OBJECT!");
+            console.log("Converting with toMillis():", firstNote.timestamp.toMillis());
+          }
+        }
+      }
+
+      console.log("Current lastUpdate for comparison:", lastUpdate);
+    })
+    .catch(error => {
+      console.error("API test failed:", error);
+    });
+}
+
+function testWebhookEndpoint() {
+  console.log("=== WEBHOOK ENDPOINT TEST ===");
+
+  const testData = {
+    fridgeId: fridgeId,
+    content: "Debug test note\n\n- [ ] Test task 1\n- [ ] Test task 2\n\n#jess",
+    sender: "Debug Test"
+  };
+
+  console.log("Sending test data to webhook:", testData);
+
+  fetch(API_BASE + "/api/webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(testData)
+  })
+  .then(response => {
+    console.log("Webhook response status:", response.status);
+    return response.text();
+  })
+  .then(text => {
+    console.log("Webhook response text:", text);
+    try {
+      const json = JSON.parse(text);
+      console.log("Webhook response JSON:", json);
+
+      if (json.success) {
+        console.log("✅ Webhook test successful!");
+        console.log("Note ID:", json.noteId);
+        console.log("Waiting 3 seconds then fetching notes...");
+
+        setTimeout(() => {
+          testApiResponse();
+        }, 3000);
+      } else {
+        console.log("❌ Webhook test failed:", json.error);
+      }
+    } catch (e) {
+      console.log("Response is not JSON");
+    }
+  })
+  .catch(error => {
+    console.error("Webhook test failed:", error);
+  });
+}
+
+function debugTimestampComparison() {
+  console.log("=== TIMESTAMP COMPARISON DEBUG ===");
+
+  if (allNotes.length === 0) {
+    console.log("No notes to compare");
+    return;
+  }
+
+  const latestNote = allNotes[0];
+  const currentTime = Date.now();
+
+  console.log("Comparison test:", {
+    latestNoteTimestamp: latestNote.timestamp,
+    latestNoteType: typeof latestNote.timestamp,
+    lastUpdate: lastUpdate,
+    lastUpdateType: typeof lastUpdate,
+    currentTime: currentTime,
+
+    // Test comparisons
+    noteVsLastUpdate: latestNote.timestamp > lastUpdate,
+    noteVsCurrent: latestNote.timestamp < currentTime,
+    lastUpdateVsCurrent: lastUpdate < currentTime,
+
+    // Time differences
+    noteAge: currentTime - latestNote.timestamp,
+    lastUpdateAge: currentTime - lastUpdate,
+  });
+
+  // If timestamps seem wrong, suggest fixes
+  if (typeof latestNote.timestamp !== 'number') {
+    console.log("🔥 PROBLEM: Note timestamp is not a number!");
+    console.log("Note timestamp:", latestNote.timestamp);
+
+    if (latestNote.timestamp && latestNote.timestamp.toMillis) {
+      console.log("Looks like Firestore Timestamp - converting...");
+      console.log("Converted:", latestNote.timestamp.toMillis());
+    }
+  }
+}
+
+function forceRefreshWithTimestamp() {
+  console.log("=== FORCE REFRESH WITH TIMESTAMP RESET ===");
+
+  // Reset lastUpdate to force showing new notes
+  const oldLastUpdate = lastUpdate;
+  lastUpdate = 0;
+
+  console.log("Reset lastUpdate from", oldLastUpdate, "to", lastUpdate);
+  console.log("Fetching notes...");
+
+  fetchNote();
+}
+
+function simulateNewNote() {
+  console.log("=== SIMULATING NEW NOTE ===");
+
+  // Create a fake note with current timestamp
+  const fakeNote = {
+    id: "debug_" + Date.now(),
+    content: "<h1>Debug Test Note</h1><p>This is a simulated note</p><ul><li><input type=\"checkbox\"> Test task</li></ul><p>#jess</p>",
+    timestamp: Date.now(),
+    fridgeId: fridgeId,
+    fridgeName: fridgeName,
+    source: "debug",
+    tags: ["jess"]
+  };
+
+  console.log("Adding fake note:", fakeNote);
+
+  // Add to beginning of allNotes array
+  allNotes.unshift(fakeNote);
+
+  // Update display
+  displayNotes({ notes: allNotes });
+
+  console.log("Fake note added and displayed");
+}
+
+
+
+
+
 // CRITICAL: Make functions globally available for onclick handlers
 window.deleteNote = deleteNote;
 window.deleteIndividualNote = deleteIndividualNote;
@@ -1541,10 +1749,25 @@ window.testDeleteFunctions = testDeleteFunctions;
 window.testCheckboxFix = testCheckboxFix;
 window.testManualRefresh = testManualRefresh;
 window.testFixedDeleteRequests = testFixedDeleteRequests;
+// Add all functions to window for console access
+window.debugFirebaseTimestamps = debugFirebaseTimestamps;
+window.testApiResponse = testApiResponse;
+window.testWebhookEndpoint = testWebhookEndpoint;
+window.debugTimestampComparison = debugTimestampComparison;
+window.forceRefreshWithTimestamp = forceRefreshWithTimestamp;
+window.simulateNewNote = simulateNewNote;
 
 console.log("🔧 Added testDeleteFunctions() to console");
 console.log("🔧 Run testFixedDeleteRequests() to verify delete URLs");
 console.log("🔧 Added debugCheckboxStates() function to console");
+console.log("🔧 DEBUG FUNCTIONS LOADED:");
+console.log("• debugFirebaseTimestamps() - Check timestamp formats");
+console.log("• testApiResponse() - Test API response format");
+console.log("• testWebhookEndpoint() - Send test note via webhook");
+console.log("• debugTimestampComparison() - Debug timestamp logic");
+console.log("• forceRefreshWithTimestamp() - Reset and force refresh");
+console.log("• simulateNewNote() - Add fake note for testing");
+console.log("Run any of these in browser console to debug the issue!");
 console.log(
   "🔧 Debug functions available: testCheckboxFix(), testManualRefresh()",
 );

@@ -1,4 +1,4 @@
-// api/webhook.js - Clean version without frontend code
+// api/webhook.js - FIXED Firebase Timestamp version
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
@@ -10,6 +10,7 @@ import {
   orderBy,
   limit,
   deleteDoc,
+  Timestamp, // ← CRITICAL: Import Timestamp
 } from "firebase/firestore";
 import { marked } from "marked";
 
@@ -145,10 +146,10 @@ export default async function handler(req, res) {
     const tags = extractTags(formattedContent);
     console.log('Extracted tags:', tags);
 
-    // Create note data
+    // 🔥 CRITICAL FIX: Use Firestore Timestamp instead of new Date()
     const noteData = {
       content: formattedContent,
-      timestamp: new Date(),
+      timestamp: Timestamp.now(), // ← FIXED: Use Firestore Timestamp
       fridgeId,
       fridgeName,
       source: "ios_shortcut",
@@ -157,7 +158,8 @@ export default async function handler(req, res) {
 
     console.log('Saving note data:', {
       ...noteData,
-      content: noteData.content.substring(0, 100) + '...'
+      content: noteData.content.substring(0, 100) + '...',
+      timestamp: 'Firestore Timestamp object' // Don't log the actual timestamp object
     });
 
     // Save to Firestore
@@ -179,11 +181,12 @@ export default async function handler(req, res) {
       fridgeId,
       fridgeName,
       tags,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(), // Return readable timestamp for debugging
       debugInfo: {
         contentLength: formattedContent.length,
         processedLength: processedContent.length,
-        originalLength: noteContent.length
+        originalLength: noteContent.length,
+        timestampType: 'Firestore Timestamp' // Debug info
       }
     });
 
