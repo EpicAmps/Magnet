@@ -1,4 +1,4 @@
-// tada.js - Clean version with API polling only
+// tada.js - Clean version with API polling, fixes, and debug
 "use strict";
 
 // Variables
@@ -29,6 +29,40 @@ fridgeId =
   urlParams.get("id") || getFromPath() || localStorage.getItem("fridgeId");
 fridgeName = localStorage.getItem("fridgeName");
 
+// === FRIDGE ID DEBUG & FIXES ===
+console.log("=== FRIDGE ID DEBUG ===");
+console.log("URL params:", Object.fromEntries(urlParams));
+console.log("URL path:", window.location.pathname);
+console.log("fridgeId from URL param 'id':", urlParams.get("id"));
+console.log("fridgeId from path:", getFromPath());
+console.log("fridgeId from localStorage:", localStorage.getItem("fridgeId"));
+console.log("Final fridgeId:", fridgeId);
+console.log("fridgeName:", fridgeName);
+
+// If no fridgeId, set a default for TBT testing
+if (!fridgeId) {
+  console.log("⚠️ No fridgeId found, setting default for TBT build");
+  if (
+    window.location.hostname.includes("tbt") ||
+    window.location.hostname.includes("localhost")
+  ) {
+    fridgeId = "fridge_tbt_test";
+    fridgeName = "tbt-test";
+    localStorage.setItem("fridgeId", fridgeId);
+    localStorage.setItem("fridgeName", fridgeName);
+    console.log("✅ Set TBT defaults:", { fridgeId, fridgeName });
+  } else {
+    // Generate a default based on hostname
+    fridgeId =
+      "fridge_" +
+      window.location.hostname.replace(/[^a-z0-9]/g, "").slice(0, 10);
+    fridgeName = "default";
+    localStorage.setItem("fridgeId", fridgeId);
+    localStorage.setItem("fridgeName", fridgeName);
+    console.log("✅ Set defaults:", { fridgeId, fridgeName });
+  }
+}
+
 console.log("tada.js loaded successfully");
 
 var lastPollingCheck = 0;
@@ -38,11 +72,19 @@ var API_BASE = window.location.origin;
 // Update display with fridge info
 if (fridgeId && fridgeName) {
   document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("fridgeIdInfo").textContent = fridgeId;
-    document.getElementById("fridgeEmailInfo").textContent =
-      "incoming.magnet+" + fridgeName + "@gmail.com";
+    var fridgeIdElement = document.getElementById("fridgeIdInfo");
+    var fridgeEmailElement = document.getElementById("fridgeEmailInfo");
+
+    if (fridgeIdElement) {
+      fridgeIdElement.textContent = fridgeId;
+    }
+    if (fridgeEmailElement) {
+      fridgeEmailElement.textContent =
+        "incoming.magnet+" + fridgeName + "@gmail.com";
+    }
   });
 } else {
+  console.log("⚠️ Missing fridge info, redirecting to setup");
   window.location.href = "/setup.html";
 }
 
@@ -56,9 +98,9 @@ function getFromPath() {
 
 function toggleInfo() {
   var popup = document.getElementById("infoPopup");
-  if (popup.classList.contains("show")) {
+  if (popup && popup.classList.contains("show")) {
     popup.classList.remove("show");
-  } else {
+  } else if (popup) {
     popup.classList.add("show");
   }
 }
@@ -68,14 +110,17 @@ function updateCountdown() {
   var timeSinceLastCheck = Math.floor((now - lastPollingCheck) / 1000);
   var timeUntilNext = Math.max(0, 120 - timeSinceLastCheck);
 
-  if (timeUntilNext > 0) {
-    var minutes = Math.floor(timeUntilNext / 60);
-    var seconds = timeUntilNext % 60;
-    var paddedSeconds = seconds < 10 ? "0" + seconds : seconds;
-    document.getElementById("countdown").textContent =
-      " • Next check in " + minutes + ":" + paddedSeconds;
-  } else {
-    document.getElementById("countdown").textContent = " • Checking now...";
+  var countdownElement = document.getElementById("countdown");
+  if (countdownElement) {
+    if (timeUntilNext > 0) {
+      var minutes = Math.floor(timeUntilNext / 60);
+      var seconds = timeUntilNext % 60;
+      var paddedSeconds = seconds < 10 ? "0" + seconds : seconds;
+      countdownElement.textContent =
+        " • Next check in " + minutes + ":" + paddedSeconds;
+    } else {
+      countdownElement.textContent = " • Checking now...";
+    }
   }
 }
 
@@ -87,11 +132,13 @@ function startCountdown() {
 }
 
 function updateConnectionStatus(connected) {
-  if (connected) {
-    document.getElementById("statusText").textContent =
-      "✅ Connected and ready";
-  } else {
-    document.getElementById("statusText").textContent = "🔄 Connecting...";
+  var statusElement = document.getElementById("statusText");
+  if (statusElement) {
+    if (connected) {
+      statusElement.textContent = "✅ Connected and ready";
+    } else {
+      statusElement.textContent = "🔄 Connecting...";
+    }
   }
 }
 
@@ -102,7 +149,7 @@ function fixMalformedCheckboxes(html) {
   console.log("Fixing malformed checkboxes...");
 
   // Fix the main issue: <input ="" type="checkbox"> → <input type="checkbox">
-  let fixed = html.replace(
+  var fixed = html.replace(
     /<input\s+=""\s+type="checkbox">/g,
     '<input type="checkbox">',
   );
@@ -124,15 +171,32 @@ function fixMalformedCheckboxes(html) {
   return fixed;
 }
 
-// MAIN fetchNote function - keep only this one
+// MAIN fetchNote function - FIXED with proper fridgeId handling
 function fetchNote() {
   startCountdown();
   console.log("=== FETCH NOTE DEBUG ===");
   console.log("Fetching notes for fridgeId:", fridgeId);
 
-  fetch(API_BASE + "/api/note?fridgeId=" + fridgeId)
+  if (!fridgeId) {
+    console.error("❌ No fridgeId available!");
+    var notesContainer = document.getElementById("notesContainer");
+    if (notesContainer) {
+      notesContainer.innerHTML =
+        '<div class="note-content"><div class="empty-state">❌ No fridge ID configured<br><br>Please visit setup page</div></div>';
+    }
+    return;
+  }
+
+  var fetchUrl =
+    API_BASE + "/api/note?fridgeId=" + encodeURIComponent(fridgeId);
+  console.log("🌐 Fetching from:", fetchUrl);
+
+  fetch(fetchUrl)
     .then(function (response) {
       console.log("Response status:", response.status);
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status + ": " + response.statusText);
+      }
       return response.json();
     })
     .then(function (data) {
@@ -141,12 +205,14 @@ function fetchNote() {
 
       // FIX MALFORMED CHECKBOXES IN API RESPONSE
       if (data.notes && Array.isArray(data.notes)) {
-        data.notes = data.notes.map((note) => ({
-          ...note,
-          content: note.content
-            ? fixMalformedCheckboxes(note.content)
-            : note.content,
-        }));
+        data.notes = data.notes.map(function (note) {
+          return {
+            ...note,
+            content: note.content
+              ? fixMalformedCheckboxes(note.content)
+              : note.content,
+          };
+        });
         console.log(
           "Fixed malformed checkboxes in",
           data.notes.length,
@@ -161,9 +227,16 @@ function fetchNote() {
     .catch(function (error) {
       console.error("Error fetching note:", error);
       var notesContainer = document.getElementById("notesContainer");
-      notesContainer.innerHTML =
-        '<div class="note-content"><div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing</div></div>';
-      document.getElementById("statusText").textContent = "❌ Connection error";
+      if (notesContainer) {
+        notesContainer.innerHTML =
+          '<div class="note-content"><div class="empty-state">❌ Connection error<br><br>Check your network and try refreshing<br><br>Error: ' +
+          error.message +
+          "</div></div>";
+      }
+      var statusElement = document.getElementById("statusText");
+      if (statusElement) {
+        statusElement.textContent = "❌ Connection error";
+      }
       updateConnectionStatus(false);
     });
 }
@@ -173,13 +246,13 @@ function isNoteCompleted(note) {
   if (!note.content) return false;
 
   // Count HTML checkboxes (look for checked attribute)
-  const uncheckedMatches =
+  var uncheckedMatches =
     note.content.match(/<input[^>]*type="checkbox"(?![^>]*checked)[^>]*>/gi) ||
     [];
-  const checkedMatches =
+  var checkedMatches =
     note.content.match(/<input[^>]*type="checkbox"[^>]*checked[^>]*>/gi) || [];
 
-  const totalBoxes = uncheckedMatches.length + checkedMatches.length;
+  var totalBoxes = uncheckedMatches.length + checkedMatches.length;
 
   if (totalBoxes <= 1) return false; // Need at least 2 tasks
 
@@ -201,6 +274,11 @@ function displayNotes(notesData) {
   var notesContainer = document.getElementById("notesContainer");
   var paginationDiv = document.getElementById("pagination");
 
+  if (!notesContainer) {
+    console.error("❌ notesContainer element not found!");
+    return;
+  }
+
   // Handle both old format (single note) and new format (multiple notes)
   if (notesData.notes && Array.isArray(notesData.notes)) {
     allNotes = notesData.notes;
@@ -218,13 +296,14 @@ function displayNotes(notesData) {
   if (allNotes.length === 0) {
     notesContainer.innerHTML =
       '<div class="note-content"><div class="empty-state">📱 No notes yet. Send your first note from iPhone!</div></div>';
-    paginationDiv.style.display = "none";
-    document.getElementById("statusText").textContent = "⏳ No notes yet";
+    if (paginationDiv) paginationDiv.style.display = "none";
+    var statusElement = document.getElementById("statusText");
+    if (statusElement) statusElement.textContent = "⏳ No notes yet";
     return;
   }
 
   // Check for completed notes and mark them
-  for (let i = 0; i < allNotes.length; i++) {
+  for (var i = 0; i < allNotes.length; i++) {
     if (!allNotes[i].completed && isNoteCompleted(allNotes[i])) {
       allNotes[i].completed = true;
       allNotes[i].completedAt =
@@ -233,7 +312,7 @@ function displayNotes(notesData) {
   }
 
   // Sort notes
-  allNotes.sort((a, b) => {
+  allNotes.sort(function (a, b) {
     if (a.completed && !b.completed) return 1;
     if (!a.completed && b.completed) return -1;
     if (a.completed && b.completed) {
@@ -247,28 +326,35 @@ function displayNotes(notesData) {
 
   // Update status
   var totalNotes = allNotes.length;
-  var completedNotes = allNotes.filter((note) => note.completed).length;
+  var completedNotes = allNotes.filter(function (note) {
+    return note.completed;
+  }).length;
   var activeNotes = totalNotes - completedNotes;
   var latestNote = allNotes[0];
 
-  if (activeNotes > 0) {
-    document.getElementById("statusText").textContent =
-      "📧 " +
-      activeNotes +
-      " active note" +
-      (activeNotes > 1 ? "s" : "") +
-      (completedNotes > 0 ? ", " + completedNotes + " completed" : "") +
-      " from " +
-      (latestNote.sender || "someone");
-  } else {
-    document.getElementById("statusText").textContent =
-      "🎉 All " + totalNotes + " notes completed!";
+  var statusElement = document.getElementById("statusText");
+  if (statusElement) {
+    if (activeNotes > 0) {
+      statusElement.textContent =
+        "📧 " +
+        activeNotes +
+        " active note" +
+        (activeNotes > 1 ? "s" : "") +
+        (completedNotes > 0 ? ", " + completedNotes + " completed" : "") +
+        " from " +
+        (latestNote.sender || "someone");
+    } else {
+      statusElement.textContent = "🎉 All " + totalNotes + " notes completed!";
+    }
   }
 
   // Update timestamp
-  document.getElementById("timestamp").textContent =
-    "Last updated: " + new Date(latestNote.timestamp).toLocaleString();
-  lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
+  var timestampElement = document.getElementById("timestamp");
+  if (timestampElement && latestNote) {
+    timestampElement.textContent =
+      "Last updated: " + new Date(latestNote.timestamp).toLocaleString();
+    lastUpdate = Math.max(lastUpdate, latestNote.timestamp);
+  }
 }
 
 function formatNoteContentWithCheckboxes(content) {
@@ -308,6 +394,7 @@ function formatNoteContentWithCheckboxes(content) {
 // Enhanced renderCurrentPage with consistent layout across all tabs
 function renderCurrentPage() {
   var notesContainer = document.getElementById("notesContainer");
+  if (!notesContainer) return;
 
   // Filter notes based on current tab
   var filteredNotes = filterNotesByTab(allNotes);
@@ -421,6 +508,8 @@ function updatePagination() {
   var prevBtn = document.getElementById("prevBtn");
   var nextBtn = document.getElementById("nextBtn");
 
+  if (!paginationDiv) return;
+
   var filteredNotes = filterNotesByTab(allNotes);
   var totalPages = Math.ceil(filteredNotes.length / notesPerPage);
 
@@ -430,10 +519,10 @@ function updatePagination() {
   }
 
   paginationDiv.style.display = "flex";
-  pageInfo.textContent = currentPage + 1 + " of " + totalPages;
+  if (pageInfo) pageInfo.textContent = currentPage + 1 + " of " + totalPages;
 
-  prevBtn.disabled = currentPage === 0;
-  nextBtn.disabled = currentPage >= totalPages - 1;
+  if (prevBtn) prevBtn.disabled = currentPage === 0;
+  if (nextBtn) nextBtn.disabled = currentPage >= totalPages - 1;
 }
 
 function changePage(direction) {
@@ -509,11 +598,6 @@ function updateTabCounts() {
         tabCounts[tag]++;
       }
     });
-
-    // If note has no recognized tags, it only counts toward "all"
-    if (tags.length === 0) {
-      // Already counted in "all" above
-    }
   });
 
   updateTabDisplay();
@@ -563,7 +647,9 @@ function switchToTab(tab) {
 function updateStatusForTab() {
   var filteredNotes = filterNotesByTab(allNotes);
   var totalNotes = filteredNotes.length;
-  var completedNotes = filteredNotes.filter((note) => note.completed).length;
+  var completedNotes = filteredNotes.filter(function (note) {
+    return note.completed;
+  }).length;
   var activeNotes = totalNotes - completedNotes;
 
   var tabName =
@@ -571,20 +657,22 @@ function updateStatusForTab() {
       ? "All"
       : currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
 
-  if (totalNotes === 0) {
-    document.getElementById("statusText").textContent =
-      "📱 No notes in " + tabName + " tab";
-  } else if (activeNotes > 0) {
-    document.getElementById("statusText").textContent =
-      "📧 " +
-      tabName +
-      ": " +
-      activeNotes +
-      " active" +
-      (completedNotes > 0 ? ", " + completedNotes + " completed" : "");
-  } else {
-    document.getElementById("statusText").textContent =
-      "🎉 All " + totalNotes + " notes completed in " + tabName + "!";
+  var statusElement = document.getElementById("statusText");
+  if (statusElement) {
+    if (totalNotes === 0) {
+      statusElement.textContent = "📱 No notes in " + tabName + " tab";
+    } else if (activeNotes > 0) {
+      statusElement.textContent =
+        "📧 " +
+        tabName +
+        ": " +
+        activeNotes +
+        " active" +
+        (completedNotes > 0 ? ", " + completedNotes + " completed" : "");
+    } else {
+      statusElement.textContent =
+        "🎉 All " + totalNotes + " notes completed in " + tabName + "!";
+    }
   }
 }
 
@@ -604,25 +692,31 @@ function formatTime(timestamp) {
   return date.toLocaleDateString();
 }
 
-// Global delete function (deletes all notes)
+// Global delete function (deletes all notes) - FIXED with proper fridgeId
 function deleteNote() {
   if (!confirm("Are you sure you want to delete ALL notes?")) {
     return;
   }
 
-  updateConnectionStatus(true);
-  document.getElementById("statusText").textContent =
-    "🗑️ Deleting all notes...";
+  if (!fridgeId) {
+    console.error("❌ No fridgeId available for deletion!");
+    return;
+  }
 
-  // FIX: Add fridgeId to the URL query string
-  fetch(API_BASE + "/api/note?fridgeId=" + fridgeId, {
-    // ← ADD THIS
+  updateConnectionStatus(true);
+  var statusElement = document.getElementById("statusText");
+  if (statusElement) {
+    statusElement.textContent = "🗑️ Deleting all notes...";
+  }
+
+  // FIXED: Add fridgeId to the URL query string AND body
+  fetch(API_BASE + "/api/note?fridgeId=" + encodeURIComponent(fridgeId), {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      fridgeId: fridgeId, // Also keep in body for redundancy
+      fridgeId: fridgeId,
       deleteAll: true,
     }),
   })
@@ -635,20 +729,25 @@ function deleteNote() {
 
         // Update UI immediately
         var notesContainer = document.getElementById("notesContainer");
-        notesContainer.innerHTML =
-          '<div class="note-content"><div class="empty-state">📱 All notes deleted!<br><br>Send a new note to see it here!</div></div>';
+        if (notesContainer) {
+          notesContainer.innerHTML =
+            '<div class="note-content"><div class="empty-state">📱 All notes deleted!<br><br>Send a new note to see it here!</div></div>';
+        }
 
         // Hide pagination
-        document.getElementById("pagination").style.display = "none";
+        var paginationDiv = document.getElementById("pagination");
+        if (paginationDiv) paginationDiv.style.display = "none";
 
         // Update tabs
         updateTabCounts();
 
         // Update status and timestamp
-        document.getElementById("statusText").textContent =
-          "✅ All notes deleted!";
-        document.getElementById("timestamp").textContent =
-          "Deleted: " + new Date().toLocaleString();
+        if (statusElement) statusElement.textContent = "✅ All notes deleted!";
+        var timestampElement = document.getElementById("timestamp");
+        if (timestampElement) {
+          timestampElement.textContent =
+            "Deleted: " + new Date().toLocaleString();
+        }
 
         // Force a fresh fetch after a short delay to confirm deletion
         setTimeout(function () {
@@ -660,8 +759,9 @@ function deleteNote() {
     })
     .catch(function (error) {
       console.error("Error deleting notes:", error);
-      document.getElementById("statusText").textContent =
-        "❌ Error deleting notes. Try again.";
+      if (statusElement) {
+        statusElement.textContent = "❌ Error deleting notes. Try again.";
+      }
 
       // Still clear frontend state even if backend fails
       allNotes = [];
@@ -671,9 +771,14 @@ function deleteNote() {
     });
 }
 
-// Individual note delete function
+// Individual note delete function - FIXED with proper fridgeId
 function deleteIndividualNote(noteIndex, noteId) {
   if (!confirm("Are you sure you want to delete this note?")) {
+    return;
+  }
+
+  if (!fridgeId) {
+    console.error("❌ No fridgeId available for deletion!");
     return;
   }
 
@@ -687,17 +792,17 @@ function deleteIndividualNote(noteIndex, noteId) {
     return;
   }
 
-  document.getElementById("statusText").textContent = "🗑️ Deleting note...";
+  var statusElement = document.getElementById("statusText");
+  if (statusElement) statusElement.textContent = "🗑️ Deleting note...";
 
-  // FIX: Add fridgeId to the URL query string
-  fetch(API_BASE + "/api/note?fridgeId=" + fridgeId, {
-    // ← ADD THIS
+  // FIXED: Add fridgeId to the URL query string AND body
+  fetch(API_BASE + "/api/note?fridgeId=" + encodeURIComponent(fridgeId), {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      fridgeId: fridgeId, // Also keep in body for redundancy
+      fridgeId: fridgeId,
       noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
       deleteAll: false,
     }),
@@ -719,23 +824,27 @@ function deleteIndividualNote(noteIndex, noteId) {
         // Re-render the current page
         if (allNotes.length === 0) {
           var notesContainer = document.getElementById("notesContainer");
-          notesContainer.innerHTML =
-            '<div class="note-content"><div class="empty-state">📱 No notes left!<br><br>Send a new note to see it here!</div></div>';
-          document.getElementById("pagination").style.display = "none";
-          document.getElementById("statusText").textContent =
-            "✅ Note deleted!";
+          if (notesContainer) {
+            notesContainer.innerHTML =
+              '<div class="note-content"><div class="empty-state">📱 No notes left!<br><br>Send a new note to see it here!</div></div>';
+          }
+          var paginationDiv = document.getElementById("pagination");
+          if (paginationDiv) paginationDiv.style.display = "none";
+          if (statusElement) statusElement.textContent = "✅ Note deleted!";
         } else {
           renderCurrentPage();
           updatePagination();
           updateTabCounts(); // Update tab counts after deletion
 
           var totalNotes = allNotes.length;
-          document.getElementById("statusText").textContent =
-            "✅ Note deleted! " +
-            totalNotes +
-            " note" +
-            (totalNotes > 1 ? "s" : "") +
-            " remaining";
+          if (statusElement) {
+            statusElement.textContent =
+              "✅ Note deleted! " +
+              totalNotes +
+              " note" +
+              (totalNotes > 1 ? "s" : "") +
+              " remaining";
+          }
         }
       } else {
         throw new Error("Failed to delete note: " + response.status);
@@ -743,8 +852,9 @@ function deleteIndividualNote(noteIndex, noteId) {
     })
     .catch(function (error) {
       console.error("Error deleting individual note:", error);
-      document.getElementById("statusText").textContent =
-        "❌ Error deleting note. Try again.";
+      if (statusElement) {
+        statusElement.textContent = "❌ Error deleting note. Try again.";
+      }
     });
 }
 
@@ -761,8 +871,8 @@ function findNoteIndexFromElement(noteElement) {
 
   // For multiple notes, find the note-item index
   if (noteElement.classList.contains("note-item")) {
-    const allNoteItems = document.querySelectorAll(".note-item");
-    for (let i = 0; i < allNoteItems.length; i++) {
+    var allNoteItems = document.querySelectorAll(".note-item");
+    for (var i = 0; i < allNoteItems.length; i++) {
       if (allNoteItems[i] === noteElement) {
         // Calculate the actual index in allNotes array
         return currentPage * notesPerPage + i;
@@ -771,27 +881,6 @@ function findNoteIndexFromElement(noteElement) {
   }
 
   return -1;
-}
-
-function testFixedDeleteRequests() {
-  console.log("=== TESTING FIXED DELETE REQUESTS ===");
-
-  // Test delete all URL
-  const deleteAllUrl = API_BASE + "/api/note?fridgeId=" + fridgeId;
-  console.log("Delete All URL:", deleteAllUrl);
-
-  // Test individual delete URL
-  if (allNotes.length > 0) {
-    const firstNote = allNotes[0];
-    const deleteIndividualUrl = API_BASE + "/api/note?fridgeId=" + fridgeId;
-    console.log("Delete Individual URL:", deleteIndividualUrl);
-    console.log("Note to delete:", {
-      id: firstNote.id,
-      timestamp: firstNote.timestamp,
-    });
-  }
-
-  console.log("Current fridgeId:", fridgeId);
 }
 
 // Task interaction setup
@@ -932,20 +1021,20 @@ function checkTaskInteraction(checkbox, listItem) {
 
 // Enhanced checkTaskCompletion function
 function checkTaskCompletion(container) {
-  const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+  var checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
   if (checkboxes.length === 0) return false; // No checkboxes
   if (checkboxes.length === 1) return false; // Only one task doesn't warrant celebration
 
-  const checkedBoxes = container.querySelectorAll(
+  var checkedBoxes = container.querySelectorAll(
     'input[type="checkbox"]:checked',
   );
-  const allCompleted = checkboxes.length === checkedBoxes.length;
+  var allCompleted = checkboxes.length === checkedBoxes.length;
 
   if (allCompleted) {
     // Find which note this container belongs to
-    const noteElement = container.closest(".note-item, .note-content");
-    const noteIndex = findNoteIndexFromElement(noteElement);
+    var noteElement = container.closest(".note-item, .note-content");
+    var noteIndex = findNoteIndexFromElement(noteElement);
 
     if (noteIndex !== -1) {
       // Mark the note as completed and move to bottom
@@ -963,14 +1052,14 @@ function checkTaskCompletion(container) {
 
 // Check if all tasks are now UNchecked (resurrection!)
 function checkTaskResurrection(container) {
-  const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+  var checkboxes = container.querySelectorAll('input[type="checkbox"]');
 
   if (checkboxes.length === 0) return false;
 
-  const checkedBoxes = container.querySelectorAll(
+  var checkedBoxes = container.querySelectorAll(
     'input[type="checkbox"]:checked',
   );
-  const allUnchecked = checkedBoxes.length === 0;
+  var allUnchecked = checkedBoxes.length === 0;
 
   console.log("Resurrection check:", {
     totalCheckboxes: checkboxes.length,
@@ -979,17 +1068,17 @@ function checkTaskResurrection(container) {
   });
 
   if (allUnchecked) {
-    const noteElement = container.closest(".note-item, .note-content");
-    const noteIndex = findNoteIndexFromElement(noteElement);
+    var noteElement = container.closest(".note-item, .note-content");
+    var noteIndex = findNoteIndexFromElement(noteElement);
 
     if (noteIndex !== -1) {
-      const note = allNotes[noteIndex];
+      var note = allNotes[noteIndex];
 
       if (note.completed) {
         console.log("🧟 Resurrecting note from the dead!");
 
         // Update the note content to reflect all unchecked states
-        let updatedContent = note.content;
+        var updatedContent = note.content;
         updatedContent = updatedContent.replace(
           /<input[^>]*type="checkbox"[^>]*>/gi,
           '<input type="checkbox">',
@@ -1009,15 +1098,15 @@ function checkTaskResurrection(container) {
 function markNoteAsCompleted(noteIndex) {
   if (noteIndex < 0 || noteIndex >= allNotes.length) return;
 
-  const completedNote = allNotes[noteIndex];
+  var completedNote = allNotes[noteIndex];
 
   // CRITICAL: Capture the current checkbox states from the DOM before moving the note
-  const allNoteElements = document.querySelectorAll(".note-item");
-  let noteElement = null;
+  var allNoteElements = document.querySelectorAll(".note-item");
+  var noteElement = null;
 
   // Find the correct note element
-  for (let i = 0; i < allNoteElements.length; i++) {
-    const actualIndex = currentPage * notesPerPage + i;
+  for (var i = 0; i < allNoteElements.length; i++) {
+    var actualIndex = currentPage * notesPerPage + i;
     if (actualIndex === noteIndex) {
       noteElement = allNoteElements[i];
       break;
@@ -1032,16 +1121,16 @@ function markNoteAsCompleted(noteIndex) {
   }
 
   if (noteElement) {
-    const checkboxes = noteElement.querySelectorAll('input[type="checkbox"]');
-    let updatedContent = completedNote.content;
-    let checkboxCount = 0;
+    var checkboxes = noteElement.querySelectorAll('input[type="checkbox"]');
+    var updatedContent = completedNote.content;
+    var checkboxCount = 0;
 
     // Update the content to reflect ALL current checkbox states
     updatedContent = updatedContent.replace(
       /<input[^>]*type="checkbox"[^>]*>/gi,
       function (match) {
         if (checkboxes[checkboxCount]) {
-          const isChecked = checkboxes[checkboxCount].checked;
+          var isChecked = checkboxes[checkboxCount].checked;
           checkboxCount++;
           return isChecked
             ? '<input type="checkbox" checked="checked">'
@@ -1071,27 +1160,32 @@ function markNoteAsCompleted(noteIndex) {
   );
 
   // Adjust current page if needed
-  const totalPages = Math.ceil(allNotes.length / notesPerPage);
+  var totalPages = Math.ceil(allNotes.length / notesPerPage);
   if (currentPage >= totalPages && currentPage > 0) {
     currentPage = totalPages - 1;
   }
 
   // Re-render after celebration with proper state preservation
-  setTimeout(() => {
+  setTimeout(function () {
     renderCurrentPage();
     updatePagination();
 
     // Update status to reflect the reordering
-    const totalNotes = allNotes.length;
-    const completedNotes = allNotes.filter((note) => note.completed).length;
-    const activeNotes = totalNotes - completedNotes;
+    var totalNotes = allNotes.length;
+    var completedNotes = allNotes.filter(function (note) {
+      return note.completed;
+    }).length;
+    var activeNotes = totalNotes - completedNotes;
 
-    if (activeNotes > 0) {
-      document.getElementById("statusText").textContent =
-        `📧 ${activeNotes} active, ${completedNotes} completed`;
-    } else {
-      document.getElementById("statusText").textContent =
-        `🎉 All ${totalNotes} notes completed!`;
+    var statusElement = document.getElementById("statusText");
+    if (statusElement) {
+      if (activeNotes > 0) {
+        statusElement.textContent =
+          "📧 " + activeNotes + " active, " + completedNotes + " completed";
+      } else {
+        statusElement.textContent =
+          "🎉 All " + totalNotes + " notes completed!";
+      }
     }
   }, 3500);
 }
@@ -1100,7 +1194,7 @@ function markNoteAsCompleted(noteIndex) {
 function resurrectNote(noteIndex) {
   if (noteIndex < 0 || noteIndex >= allNotes.length) return;
 
-  const resurrectedNote = allNotes[noteIndex];
+  var resurrectedNote = allNotes[noteIndex];
 
   // Remove completion metadata
   resurrectedNote.completed = false;
@@ -1110,8 +1204,8 @@ function resurrectNote(noteIndex) {
   allNotes.splice(noteIndex, 1);
 
   // Find where to insert it (after other active notes, before completed ones)
-  let insertIndex = 0;
-  for (let i = 0; i < allNotes.length; i++) {
+  var insertIndex = 0;
+  for (var i = 0; i < allNotes.length; i++) {
     if (allNotes[i].completed) {
       insertIndex = i;
       break;
@@ -1128,90 +1222,106 @@ function resurrectNote(noteIndex) {
   );
 
   // Adjust current page if needed
-  const totalPages = Math.ceil(allNotes.length / notesPerPage);
+  var totalPages = Math.ceil(allNotes.length / notesPerPage);
   if (currentPage >= totalPages && currentPage > 0) {
     currentPage = Math.max(0, totalPages - 1);
   }
 
   // Re-render with the new order
-  setTimeout(() => {
+  setTimeout(function () {
     renderCurrentPage();
     updatePagination();
 
     // Update status to reflect the resurrection
-    const totalNotes = allNotes.length;
-    const completedNotes = allNotes.filter((note) => note.completed).length;
-    const activeNotes = totalNotes - completedNotes;
+    var totalNotes = allNotes.length;
+    var completedNotes = allNotes.filter(function (note) {
+      return note.completed;
+    }).length;
+    var activeNotes = totalNotes - completedNotes;
 
-    document.getElementById("statusText").textContent =
-      `📧 ${activeNotes} active` +
-      (completedNotes > 0 ? `, ${completedNotes} completed` : "") +
-      " • Note resurrected! 🧟";
+    var statusElement = document.getElementById("statusText");
+    if (statusElement) {
+      statusElement.textContent =
+        "📧 " +
+        activeNotes +
+        " active" +
+        (completedNotes > 0 ? ", " + completedNotes + " completed" : "") +
+        " • Note resurrected! 🧟";
 
-    // Clear the resurrection message after a few seconds
-    setTimeout(() => {
-      if (activeNotes > 0) {
-        document.getElementById("statusText").textContent =
-          `📧 ${activeNotes} active` +
-          (completedNotes > 0 ? `, ${completedNotes} completed` : "");
-      } else {
-        document.getElementById("statusText").textContent =
-          `🎉 All ${totalNotes} notes completed!`;
-      }
-    }, 3000);
+      // Clear the resurrection message after a few seconds
+      setTimeout(function () {
+        if (activeNotes > 0) {
+          statusElement.textContent =
+            "📧 " +
+            activeNotes +
+            " active" +
+            (completedNotes > 0 ? ", " + completedNotes + " completed" : "");
+        } else {
+          statusElement.textContent =
+            "🎉 All " + totalNotes + " notes completed!";
+        }
+      }, 3000);
+    }
   }, 100);
 }
 
 // Create celebration audio
 function createTadaSound() {
   // Create a simple, triumphant "tada" sound using Web Audio API
-  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-  function playTone(frequency, duration, delay = 0) {
-    setTimeout(() => {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+    function playTone(frequency, duration, delay) {
+      if (delay === undefined) delay = 0;
+      setTimeout(function () {
+        var oscillator = audioContext.createOscillator();
+        var gainNode = audioContext.createGain();
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-      oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(
+          frequency,
+          audioContext.currentTime,
+        );
+        oscillator.type = "sine";
 
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(
-        0.3,
-        audioContext.currentTime + 0.01,
-      );
-      gainNode.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioContext.currentTime + duration,
-      );
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(
+          0.3,
+          audioContext.currentTime + 0.01,
+        );
+        gainNode.gain.exponentialRampToValueAtTime(
+          0.001,
+          audioContext.currentTime + duration,
+        );
 
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + duration);
-    }, delay);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+      }, delay);
+    }
+
+    // Play a triumphant sequence: C - E - G - C (major chord arpeggio)
+    playTone(523.25, 0.3, 0); // C5
+    playTone(659.25, 0.3, 100); // E5
+    playTone(783.99, 0.3, 200); // G5
+    playTone(1046.5, 0.5, 300); // C6
+  } catch (error) {
+    console.log("Audio context not available:", error);
   }
-
-  // Play a triumphant sequence: C - E - G - C (major chord arpeggio)
-  playTone(523.25, 0.3, 0); // C5
-  playTone(659.25, 0.3, 100); // E5
-  playTone(783.99, 0.3, 200); // G5
-  playTone(1046.5, 0.5, 300); // C6
 }
 
 // Create celebration overlay
 function createCelebrationOverlay() {
-  const overlay = document.createElement("div");
+  var overlay = document.createElement("div");
   overlay.id = "celebration-overlay";
-  overlay.innerHTML = `
-        <div class="celebration-content">
-            <div class="big-checkmark">✓</div>
-            <div class="celebration-text">TADA!</div>
-            <div class="celebration-subtext">All tasks completed! 🎉</div>
-        </div>
-        <div class="confetti-container"></div>
-    `;
+  overlay.innerHTML =
+    '<div class="celebration-content">' +
+    '<div class="big-checkmark">✓</div>' +
+    '<div class="celebration-text">TADA!</div>' +
+    '<div class="celebration-subtext">All tasks completed! 🎉</div>' +
+    "</div>" +
+    '<div class="confetti-container"></div>';
 
   document.body.appendChild(overlay);
   return overlay;
@@ -1219,7 +1329,7 @@ function createCelebrationOverlay() {
 
 // Create confetti particle
 function createConfettiPiece() {
-  const colors = [
+  var colors = [
     "#ff6b6b",
     "#4ecdc4",
     "#45b7d1",
@@ -1228,10 +1338,11 @@ function createConfettiPiece() {
     "#6c5ce7",
     "#fd79a8",
   ];
-  const shapes = ["square", "circle", "triangle"];
+  var shapes = ["square", "circle", "triangle"];
 
-  const confetti = document.createElement("div");
-  confetti.className = `confetti-piece ${shapes[Math.floor(Math.random() * shapes.length)]}`;
+  var confetti = document.createElement("div");
+  confetti.className =
+    "confetti-piece " + shapes[Math.floor(Math.random() * shapes.length)];
   confetti.style.backgroundColor =
     colors[Math.floor(Math.random() * colors.length)];
   confetti.style.left = Math.random() * 100 + "%";
@@ -1249,30 +1360,26 @@ function triggerCelebration() {
   console.log("🎉 TADA! All tasks completed!");
 
   // Create and show celebration overlay
-  const overlay = createCelebrationOverlay();
+  var overlay = createCelebrationOverlay();
 
   // Add confetti
-  const confettiContainer = overlay.querySelector(".confetti-container");
-  for (let i = 0; i < 50; i++) {
+  var confettiContainer = overlay.querySelector(".confetti-container");
+  for (var i = 0; i < 50; i++) {
     confettiContainer.appendChild(createConfettiPiece());
   }
 
   // Play celebration sound
-  try {
-    createTadaSound();
-  } catch (error) {
-    console.log("Audio context not available:", error);
-  }
+  createTadaSound();
 
   // Animate in
-  requestAnimationFrame(() => {
+  requestAnimationFrame(function () {
     overlay.classList.add("show");
   });
 
   // Remove after celebration
-  setTimeout(() => {
+  setTimeout(function () {
     overlay.classList.add("fade-out");
-    setTimeout(() => {
+    setTimeout(function () {
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
@@ -1296,7 +1403,8 @@ function initializeApp() {
     setupTaskListInteraction();
 
     // Initial load
-    document.getElementById("statusText").textContent = "🔄 Loading notes...";
+    var statusElement = document.getElementById("statusText");
+    if (statusElement) statusElement.textContent = "🔄 Loading notes...";
     fetchNote();
 
     // Setup polling every 2 minutes
@@ -1314,10 +1422,11 @@ window.addEventListener("beforeunload", function () {
   }
 });
 
-// Test functions for debugging
+// === DEBUG FUNCTIONS ===
+
 function testCheckboxFix() {
-  const testHTML = '<li><input ="" type="checkbox"> Test task</li>';
-  const fixed = fixMalformedCheckboxes(testHTML);
+  var testHTML = '<li><input ="" type="checkbox"> Test task</li>';
+  var fixed = fixMalformedCheckboxes(testHTML);
   console.log("Before:", testHTML);
   console.log("After:", fixed);
   console.log("Fixed?", !fixed.includes('=""'));
@@ -1328,25 +1437,34 @@ function testManualRefresh() {
   console.log("Forcing fresh API call...");
 
   // Add a timestamp to bypass any caching
-  const timestamp = Date.now();
-  const testUrl =
-    API_BASE + "/api/note?fridgeId=" + fridgeId + "&t=" + timestamp;
+  var timestamp = Date.now();
+  var testUrl = API_BASE + "/api/note?fridgeId=" + fridgeId + "&t=" + timestamp;
 
   console.log("Test URL:", testUrl);
 
   fetch(testUrl)
-    .then((response) => response.json())
-    .then((data) => {
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
       console.log("=== FRESH API RESPONSE ===");
       console.log("Full response:", JSON.stringify(data, null, 2));
-      console.log("Number of notes:", data.notes?.length || 0);
+      console.log("Number of notes:", data.notes ? data.notes.length : 0);
 
       if (data.notes && data.notes.length > 0) {
         console.log("=== ALL NOTES TIMESTAMPS ===");
-        data.notes.forEach((note, index) => {
-          const noteDate = new Date(note.timestamp);
+        data.notes.forEach(function (note, index) {
+          var noteDate = new Date(note.timestamp);
           console.log(
-            `Note ${index}: ${note.id} - ${noteDate.toISOString()} (${noteDate.toLocaleString()})`,
+            "Note " +
+              index +
+              ": " +
+              note.id +
+              " - " +
+              noteDate.toISOString() +
+              " (" +
+              noteDate.toLocaleString() +
+              ")",
           );
         });
       }
@@ -1354,7 +1472,7 @@ function testManualRefresh() {
       // Force display the data
       displayNotes(data);
     })
-    .catch((error) => {
+    .catch(function (error) {
       console.error("Manual refresh failed:", error);
     });
 }
@@ -1362,29 +1480,32 @@ function testManualRefresh() {
 function debugCheckboxStates() {
   console.log("=== CHECKBOX STATE DEBUG ===");
 
-  const noteElements = document.querySelectorAll(".note-item, .note-content");
-  noteElements.forEach((noteEl, noteIndex) => {
-    const checkboxes = noteEl.querySelectorAll('input[type="checkbox"]');
-    console.log(`Note ${noteIndex}:`, {
+  var noteElements = document.querySelectorAll(".note-item, .note-content");
+  noteElements.forEach(function (noteEl, noteIndex) {
+    var checkboxes = noteEl.querySelectorAll('input[type="checkbox"]');
+    console.log("Note " + noteIndex + ":", {
       totalCheckboxes: checkboxes.length,
-      checkedStates: Array.from(checkboxes).map((cb) => cb.checked),
-      domHTML: noteEl
-        .querySelector(".note-item-content")
-        ?.innerHTML.substring(0, 200),
+      checkedStates: Array.from(checkboxes).map(function (cb) {
+        return cb.checked;
+      }),
+      domHTML: noteEl.querySelector(".note-item-content")
+        ? noteEl.querySelector(".note-item-content").innerHTML.substring(0, 200)
+        : "N/A",
     });
   });
 
   console.log(
     "allNotes data:",
-    allNotes.map((note) => ({
-      id: note.id,
-      completed: note.completed,
-      contentPreview: note.content?.substring(0, 200),
-    })),
+    allNotes.map(function (note) {
+      return {
+        id: note.id,
+        completed: note.completed,
+        contentPreview: note.content ? note.content.substring(0, 200) : "N/A",
+      };
+    }),
   );
 }
 
-// DEBUG: Test delete function availability
 function testDeleteFunctions() {
   console.log("=== DELETE FUNCTIONS TEST ===");
   console.log("deleteNote function exists:", typeof deleteNote);
@@ -1403,815 +1524,11 @@ function testDeleteFunctions() {
   }
 }
 
-function testGlobalFunctions() {
-  console.log("=== GLOBAL FUNCTION TEST ===");
-  console.log("window.deleteNote:", typeof window.deleteNote);
-  console.log(
-    "window.deleteIndividualNote:",
-    typeof window.deleteIndividualNote,
-  );
-  console.log("window.switchToTab:", typeof window.switchToTab);
-  console.log("window.changePage:", typeof window.changePage);
-  console.log("window.toggleInfo:", typeof window.toggleInfo);
-  console.log("window.fetchNote:", typeof window.fetchNote);
-}
-
-window.testGlobalFunctions = testGlobalFunctions;
-console.log(
-  "🔧 Run testGlobalFunctions() to verify onclick handlers will work",
-);
-
-function debugDeleteRequest(noteIndex, noteId) {
-  console.log("=== DELETE REQUEST DEBUG ===");
-
-  const noteToDelete = allNotes[noteIndex];
-  console.log("Note to delete:", noteToDelete);
-
-  const requestBody = {
-    fridgeId: fridgeId,
-    noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
-    deleteAll: false,
-  };
-
-  console.log("Request body:", JSON.stringify(requestBody, null, 2));
-  console.log("API URL:", API_BASE + "/api/note");
-  console.log("Method: DELETE");
-
-  // Test the actual request
-  fetch(API_BASE + "/api/note", {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  })
-    .then((response) => {
-      console.log("Delete response status:", response.status);
-      console.log("Delete response ok:", response.ok);
-      return response.text(); // Get raw response
-    })
-    .then((text) => {
-      console.log("Delete response body:", text);
-      try {
-        const json = JSON.parse(text);
-        console.log("Parsed response:", json);
-      } catch (e) {
-        console.log("Response is not JSON");
-      }
-    })
-    .catch((error) => {
-      console.error("Delete request failed:", error);
-    });
-}
-function testWebhookStatus() {
-  console.log("=== TESTING WEBHOOK STATUS ===");
-
-  // Test if webhook endpoint exists and responds
-  fetch("/api/webhook", {
-    method: "GET", // Just test if it responds
-  })
-    .then((response) => {
-      console.log("Webhook endpoint status:", response.status);
-      if (response.status === 405) {
-        console.log(
-          "✅ Webhook endpoint exists (405 = Method Not Allowed for GET is expected)",
-        );
-      } else {
-        console.log("❌ Unexpected webhook response status");
-      }
-    })
-    .catch((error) => {
-      console.error("❌ Webhook endpoint not reachable:", error);
-    });
-
-  // Test webhook with sample data
-  const testData = {
-    body: "Test note from debug\n\n- [ ] Test task\n\n#jess",
-    to: "incoming.magnet+" + fridgeName + "@gmail.com",
-    subject: "Debug Test",
-    from: "Debug",
-  };
-
-  console.log("Testing webhook with data:", testData);
-
-  fetch("/api/webhook", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(testData),
-  })
-    .then((response) => {
-      console.log("Webhook test response status:", response.status);
-      return response.text();
-    })
-    .then((text) => {
-      console.log("Webhook test response:", text);
-      try {
-        const json = JSON.parse(text);
-        console.log("Parsed webhook response:", json);
-
-        if (json.success) {
-          console.log("✅ Webhook test successful! Note ID:", json.noteId);
-          console.log("Now checking if note appears in API...");
-          setTimeout(() => fetchNote(), 2000);
-        } else {
-          console.log("❌ Webhook test failed:", json.error);
-        }
-      } catch (e) {
-        console.log("Response is not JSON:", text);
-      }
-    })
-    .catch((error) => {
-      console.error("Webhook test failed:", error);
-    });
-}
-
-// Add these debug functions to your tada.js file
-// Insert these at the end of your tada.js file
-
-// 🔧 COMPREHENSIVE DEBUG FUNCTIONS
-
-function debugFirebaseTimestamps() {
-  console.log("=== FIREBASE TIMESTAMP DEBUG ===");
-
-  if (allNotes.length > 0) {
-    console.log("Sample note timestamps:");
-    allNotes.slice(0, 3).forEach((note, index) => {
-      console.log(`Note ${index}:`, {
-        id: note.id,
-        timestamp: note.timestamp,
-        timestampType: typeof note.timestamp,
-        isNumber: typeof note.timestamp === "number",
-        asDate: new Date(note.timestamp),
-        readable: new Date(note.timestamp).toISOString(),
-      });
-    });
-  }
-
-  console.log("lastUpdate:", {
-    value: lastUpdate,
-    type: typeof lastUpdate,
-    asDate: new Date(lastUpdate),
-    readable: new Date(lastUpdate).toISOString(),
-  });
-}
-
-function testApiResponse() {
-  console.log("=== API RESPONSE TEST ===");
-  console.log("Making fresh API call to debug response format...");
-
-  const testUrl =
-    API_BASE + "/api/note?fridgeId=" + fridgeId + "&debug=1&t=" + Date.now();
-  console.log("Test URL:", testUrl);
-
-  fetch(testUrl)
-    .then((response) => {
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-      return response.json();
-    })
-    .then((data) => {
-      console.log("=== RAW API RESPONSE ===");
-      console.log("Full response:", JSON.stringify(data, null, 2));
-
-      if (data.notes) {
-        console.log("Notes array length:", data.notes.length);
-
-        if (data.notes.length > 0) {
-          console.log("=== FIRST NOTE ANALYSIS ===");
-          const firstNote = data.notes[0];
-          console.log("First note:", firstNote);
-          console.log("Timestamp analysis:", {
-            timestamp: firstNote.timestamp,
-            type: typeof firstNote.timestamp,
-            isNumber: typeof firstNote.timestamp === "number",
-            isFirestoreTimestamp:
-              firstNote.timestamp &&
-              typeof firstNote.timestamp === "object" &&
-              firstNote.timestamp.toMillis,
-            currentTime: Date.now(),
-            comparison: firstNote.timestamp > lastUpdate,
-          });
-
-          // Test if it's a Firestore timestamp object
-          if (
-            firstNote.timestamp &&
-            typeof firstNote.timestamp === "object" &&
-            firstNote.timestamp.toMillis
-          ) {
-            console.log("🔥 FOUND FIRESTORE TIMESTAMP OBJECT!");
-            console.log(
-              "Converting with toMillis():",
-              firstNote.timestamp.toMillis(),
-            );
-          }
-        }
-      }
-
-      console.log("Current lastUpdate for comparison:", lastUpdate);
-    })
-    .catch((error) => {
-      console.error("API test failed:", error);
-    });
-}
-
-function testWebhookEndpoint() {
-  console.log("=== WEBHOOK ENDPOINT TEST ===");
-
-  const testData = {
-    fridgeId: fridgeId,
-    content: "Debug test note\n\n- [ ] Test task 1\n- [ ] Test task 2\n\n#jess",
-    sender: "Debug Test",
-  };
-
-  console.log("Sending test data to webhook:", testData);
-
-  fetch(API_BASE + "/api/webhook", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(testData),
-  })
-    .then((response) => {
-      console.log("Webhook response status:", response.status);
-      return response.text();
-    })
-    .then((text) => {
-      console.log("Webhook response text:", text);
-      try {
-        const json = JSON.parse(text);
-        console.log("Webhook response JSON:", json);
-
-        if (json.success) {
-          console.log("✅ Webhook test successful!");
-          console.log("Note ID:", json.noteId);
-          console.log("Waiting 3 seconds then fetching notes...");
-
-          setTimeout(() => {
-            testApiResponse();
-          }, 3000);
-        } else {
-          console.log("❌ Webhook test failed:", json.error);
-        }
-      } catch (e) {
-        console.log("Response is not JSON");
-      }
-    })
-    .catch((error) => {
-      console.error("Webhook test failed:", error);
-    });
-}
-
-function debugTimestampComparison() {
-  console.log("=== TIMESTAMP COMPARISON DEBUG ===");
-
-  if (allNotes.length === 0) {
-    console.log("No notes to compare");
-    return;
-  }
-
-  const latestNote = allNotes[0];
-  const currentTime = Date.now();
-
-  console.log("Comparison test:", {
-    latestNoteTimestamp: latestNote.timestamp,
-    latestNoteType: typeof latestNote.timestamp,
-    lastUpdate: lastUpdate,
-    lastUpdateType: typeof lastUpdate,
-    currentTime: currentTime,
-
-    // Test comparisons
-    noteVsLastUpdate: latestNote.timestamp > lastUpdate,
-    noteVsCurrent: latestNote.timestamp < currentTime,
-    lastUpdateVsCurrent: lastUpdate < currentTime,
-
-    // Time differences
-    noteAge: currentTime - latestNote.timestamp,
-    lastUpdateAge: currentTime - lastUpdate,
-  });
-
-  // If timestamps seem wrong, suggest fixes
-  if (typeof latestNote.timestamp !== "number") {
-    console.log("🔥 PROBLEM: Note timestamp is not a number!");
-    console.log("Note timestamp:", latestNote.timestamp);
-
-    if (latestNote.timestamp && latestNote.timestamp.toMillis) {
-      console.log("Looks like Firestore Timestamp - converting...");
-      console.log("Converted:", latestNote.timestamp.toMillis());
-    }
-  }
-}
-
-function forceRefreshWithTimestamp() {
-  console.log("=== FORCE REFRESH WITH TIMESTAMP RESET ===");
-
-  // Reset lastUpdate to force showing new notes
-  const oldLastUpdate = lastUpdate;
-  lastUpdate = 0;
-
-  console.log("Reset lastUpdate from", oldLastUpdate, "to", lastUpdate);
-  console.log("Fetching notes...");
-
-  fetchNote();
-}
-
-// Fixed frontend code with correct endpoints and fridgeId handling
-class MagnetNotesManager {
-  constructor() {
-    this.isTBTBuild =
-      window.location.hostname.includes("tbt") ||
-      window.location.hostname.includes("localhost");
-    this.eventSource = null;
-    this.reconnectAttempts = 0;
-    this.maxReconnectAttempts = 5;
-    this.fridgeId = this.getFridgeId(); // Get consistent fridgeId
-
-    console.log(`🎯 Magnet Notes - ${this.isTBTBuild ? "TBT" : "PROD"} mode`);
-    console.log(`🏠 Fridge ID: ${this.fridgeId}`);
-  }
-
-  // Generate consistent fridgeId
-  getFridgeId() {
-    // Try to get from URL, localStorage, or generate default
-    const urlParams = new URLSearchParams(window.location.search);
-    let fridgeId =
-      urlParams.get("fridgeId") ||
-      localStorage.getItem("magnet_fridgeId") ||
-      "fridge_default";
-
-    // Store for future use
-    localStorage.setItem("magnet_fridgeId", fridgeId);
-    return fridgeId;
-  }
-
-  // Enhanced fetch using your existing /api/note endpoint
-  async fetchNotes() {
-    try {
-      // Use your existing /api/note endpoint (not webhook!)
-      const response = await fetch(`/api/note?fridgeId=${this.fridgeId}`, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`📝 Fetched ${data.notes.length} notes from Firebase`);
-
-      // Cache for offline use
-      localStorage.setItem(
-        `magnet_notes_cache_${this.fridgeId}`,
-        JSON.stringify(data.notes),
-      );
-
-      this.updateNotesDisplay(data.notes);
-      return data.notes;
-    } catch (error) {
-      console.error("❌ Error fetching notes:", error);
-
-      // Fallback to localStorage cache
-      const cachedNotes = localStorage.getItem(
-        `magnet_notes_cache_${this.fridgeId}`,
-      );
-      if (cachedNotes) {
-        console.log("📦 Using cached notes");
-        const notes = JSON.parse(cachedNotes);
-        this.updateNotesDisplay(notes);
-        return notes;
-      }
-
-      // Ultimate fallback - empty state with error message
-      this.showError("Failed to load notes. Check your connection.");
-      this.updateNotesDisplay([]);
-      return [];
-    }
-  }
-
-  // Enhanced note creation using /api/webhook (for creation only)
-  async createNote(content) {
-    const noteData = {
-      content,
-      fridgeId: this.fridgeId,
-      fridgeName: "default",
-      body: content, // webhook.js expects 'body' field
-      timestamp: new Date().toISOString(),
-    };
-
-    try {
-      // Use /api/webhook endpoint
-      const response = await fetch("/api/webhook", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(noteData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ error: "Unknown error" }));
-        throw new Error(
-          `HTTP ${response.status}: ${errorData.error || "Failed to create note"}`,
-        );
-      }
-
-      const result = await response.json();
-      console.log("✅ Note created successfully:", result);
-
-      // Refresh notes after successful creation
-      setTimeout(() => this.fetchNotes(), 500);
-      return result;
-    } catch (error) {
-      console.error("❌ Error creating note:", error);
-
-      // Fallback: Save to localStorage for TBT builds
-      if (this.isTBTBuild) {
-        console.log("💾 Saving to localStorage fallback");
-        const cacheKey = `magnet_notes_cache_${this.fridgeId}`;
-        const cachedNotes = JSON.parse(localStorage.getItem(cacheKey) || "[]");
-
-        const newNote = {
-          ...noteData,
-          id: Date.now().toString(),
-          source: "frontend_fallback",
-          timeBoundStatus: this.determineTimeBoundStatus(content),
-          timestamp: new Date().toISOString(),
-        };
-
-        cachedNotes.unshift(newNote);
-        localStorage.setItem(cacheKey, JSON.stringify(cachedNotes));
-        this.updateNotesDisplay(cachedNotes);
-
-        this.showSuccess("Note saved locally (offline mode)");
-        return { success: true, noteId: newNote.id, fallback: true };
-      }
-
-      this.showError(`Failed to save note: ${error.message}`);
-      throw error;
-    }
-  }
-
-  // Smart EventSource connection - try webhook first, fallback to ping
-  connectEventSource() {
-    if (this.eventSource) {
-      this.eventSource.close();
-    }
-
-    // Try /api/webhook first (full functionality)
-    this.tryEventSourceEndpoint("/api/webhook", () => {
-      // Fallback to /api/ping if webhook fails
-      console.log("🔄 Webhook EventSource failed, trying /api/ping...");
-      this.tryEventSourceEndpoint("/api/ping");
-    });
-  }
-
-  tryEventSourceEndpoint(endpoint, onError = null) {
-    console.log(`🔗 Connecting EventSource to ${endpoint}`);
-    this.eventSource = new EventSource(endpoint);
-
-    this.eventSource.onopen = () => {
-      console.log(`🔗 SSE Connected to ${endpoint}`);
-      this.reconnectAttempts = 0;
-      this.hideError(); // Clear any connection errors
-    };
-
-    this.eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("📡 SSE Message:", data);
-
-        if (data.type === "note_update") {
-          this.fetchNotes();
-        } else if (data.type === "heartbeat") {
-          console.log("💓 Heartbeat received");
-        } else if (data.status === "connected") {
-          console.log(`✅ Connected to ${endpoint}:`, data.message || "Ready");
-        }
-      } catch (e) {
-        console.log("📡 SSE Raw message:", event.data);
-      }
-    };
-
-    this.eventSource.onerror = (event) => {
-      console.log(
-        `❌ SSE Error on ${endpoint} (attempt ${this.reconnectAttempts + 1})`,
-        event,
-      );
-      this.eventSource.close();
-
-      // If we have a fallback and this is the first endpoint, try fallback
-      if (onError && this.reconnectAttempts === 0) {
-        onError();
-        return;
-      }
-
-      // Otherwise use normal reconnection logic
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        const delay = Math.min(
-          1000 * Math.pow(2, this.reconnectAttempts),
-          30000,
-        );
-        console.log(`🔄 Reconnecting to ${endpoint} in ${delay}ms...`);
-
-        setTimeout(() => {
-          this.reconnectAttempts++;
-          this.tryEventSourceEndpoint(endpoint);
-        }, delay);
-      } else {
-        console.log("🔄 Max reconnection attempts reached. Starting polling.");
-        this.showWarning("Real-time updates unavailable. Using polling mode.");
-        this.startPolling();
-      }
-    };
-  }
-
-  // Polling fallback with better interval
-  startPolling() {
-    this.pollingInterval = setInterval(() => {
-      console.log("📊 Polling for updates...");
-      this.fetchNotes();
-    }, 15000); // Poll every 15 seconds
-  }
-
-  // Stop polling when EventSource reconnects
-  stopPolling() {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
-  }
-
-  // Delete note using your existing /api/note DELETE endpoint
-  async deleteNote(noteId) {
-    try {
-      const response = await fetch("/api/note", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fridgeId: this.fridgeId,
-          noteId: noteId,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("🗑️ Note deleted successfully:", result);
-
-      // Refresh notes after successful deletion
-      setTimeout(() => this.fetchNotes(), 500);
-      this.showSuccess("Note deleted!");
-      return result;
-    } catch (error) {
-      console.error("❌ Error deleting note:", error);
-      this.showError(`Failed to delete note: ${error.message}`);
-      throw error;
-    }
-  }
-
-  // Delete all notes using your existing /api/note DELETE endpoint
-  async deleteAllNotes() {
-    if (
-      !confirm(
-        "Are you sure you want to delete ALL notes? This cannot be undone.",
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/note", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fridgeId: this.fridgeId,
-          deleteAll: true,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("🗑️ All notes deleted:", result);
-
-      // Clear cache and refresh display
-      localStorage.removeItem(`magnet_notes_cache_${this.fridgeId}`);
-      this.fetchNotes();
-      this.showSuccess(`Deleted ${result.deletedCount} notes`);
-      return result;
-    } catch (error) {
-      console.error("❌ Error deleting all notes:", error);
-      this.showError(`Failed to delete notes: ${error.message}`);
-      throw error;
-    }
-  }
-  determineTimeBoundStatus(content) {
-    if (content.match(/@(urgent|critical|asap)/i)) return "urgent";
-    if (content.match(/@\d{1,2}(:\d{2})?(am|pm)/i)) return "due-soon";
-    if (content.match(/@(tomorrow|today)/i)) return "upcoming";
-    if (content.match(/@\d+(min|hr|hour|sec)/i)) return "timer";
-    return "normal";
-  }
-
-  // Enhanced display with better error handling
-  updateNotesDisplay(notes) {
-    const notesContainer =
-      document.getElementById("notes-container") ||
-      document.querySelector(".notes") ||
-      document.body;
-
-    // Remove existing notes
-    const existingNotes = notesContainer.querySelectorAll(".note");
-    existingNotes.forEach((note) => note.remove());
-
-    if (notes.length === 0) {
-      const emptyMessage = document.createElement("div");
-      emptyMessage.className = "empty-state";
-      emptyMessage.innerHTML = `
-        <p>No notes yet for this fridge.</p>
-        <p><small>Fridge ID: ${this.fridgeId}</small></p>
-      `;
-      notesContainer.appendChild(emptyMessage);
-      return;
-    }
-
-    notes.forEach((note) => {
-      const noteElement = document.createElement("div");
-      noteElement.className = "note";
-      noteElement.setAttribute("data-note-id", note.id);
-
-      // Add time-bound status class
-      const status =
-        note.timeBoundStatus || this.determineTimeBoundStatus(note.content);
-      if (status !== "normal") {
-        noteElement.classList.add(`status-${status}`);
-      }
-
-      // Format timestamp
-      const timestamp = new Date(note.timestamp).toLocaleString();
-
-      // Create note content
-      noteElement.innerHTML = `
-        <div class="note-header">
-          <span class="status-indicator status-${status}"></span>
-          <span class="note-timestamp">${timestamp}</span>
-          ${note.source === "frontend_fallback" ? '<span class="offline-badge">📱</span>' : ""}
-        </div>
-        <div class="note-content">${note.content}</div>
-      `;
-
-      notesContainer.appendChild(noteElement);
-
-      // Trigger animations for urgent notes
-      if (status === "overdue" || status === "urgent") {
-        this.triggerUrgentAlert(noteElement);
-      }
-    });
-
-    console.log(
-      `🎨 Displayed ${notes.length} notes for fridge ${this.fridgeId}`,
-    );
-  }
-
-  // UI feedback methods
-  showError(message) {
-    this.showMessage(message, "error");
-  }
-
-  showSuccess(message) {
-    this.showMessage(message, "success");
-  }
-
-  showWarning(message) {
-    this.showMessage(message, "warning");
-  }
-
-  hideError() {
-    const existing = document.querySelector(".status-message");
-    if (existing) existing.remove();
-  }
-
-  showMessage(message, type = "info") {
-    // Remove existing messages
-    this.hideError();
-
-    const messageEl = document.createElement("div");
-    messageEl.className = `status-message status-${type}`;
-    messageEl.textContent = message;
-
-    // Insert at top of page
-    document.body.insertBefore(messageEl, document.body.firstChild);
-
-    // Auto-hide success messages
-    if (type === "success") {
-      setTimeout(() => messageEl.remove(), 3000);
-    }
-  }
-
-  triggerUrgentAlert(noteElement) {
-    noteElement.style.animation = "urgent-pulse 2s infinite";
-
-    // Respect user preferences for sound
-    if (!document.hidden && !localStorage.getItem("magnet_mute_alerts")) {
-      try {
-        const audio = new Audio(
-          "data:audio/wav;base64,UklGRnoDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVYDAAA=",
-        );
-        audio.volume = 0.2;
-        audio.play().catch(() => {}); // Ignore if fails
-      } catch (e) {}
-    }
-  }
-
-  // Initialize everything
-  init() {
-    console.log("🚀 Initializing Magnet Notes Manager");
-
-    // Start with initial fetch
-    this.fetchNotes();
-
-    // Then start real-time connection
-    setTimeout(() => this.connectEventSource(), 1000);
-
-    // Setup form handler if exists
-    const noteForm =
-      document.getElementById("note-form") || document.querySelector("form");
-    if (noteForm) {
-      noteForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const contentInput =
-          e.target.content ||
-          e.target.querySelector('input[type="text"], textarea');
-        if (contentInput) {
-          const content = contentInput.value.trim();
-          if (content) {
-            try {
-              await this.createNote(content);
-              contentInput.value = "";
-              this.showSuccess("Note saved!");
-            } catch (error) {
-              // Error already shown in createNote
-            }
-          }
-        }
-      });
-    }
-
-    // Setup debug commands for development
-    if (this.isTBTBuild) {
-      window.debugMagnet = () => {
-        console.log("🔍 Debug Info:");
-        console.log("- Build:", this.isTBTBuild ? "TBT" : "PROD");
-        console.log("- Fridge ID:", this.fridgeId);
-        console.log("- EventSource State:", this.eventSource?.readyState);
-        console.log(
-          "- Cache:",
-          localStorage.getItem(`magnet_notes_cache_${this.fridgeId}`),
-        );
-      };
-
-      window.clearCache = () => {
-        localStorage.removeItem(`magnet_notes_cache_${this.fridgeId}`);
-        console.log("🗑️ Cache cleared");
-        this.fetchNotes();
-      };
-    }
-  }
-
-  // Cleanup on page unload
-  destroy() {
-    if (this.eventSource) {
-      this.eventSource.close();
-    }
-    this.stopPolling();
-  }
-}
-
-// Auto-initialize when DOM is ready
-document.addEventListener("DOMContentLoaded", () => {
-  window.magnetNotes = new MagnetNotesManager();
-  window.magnetNotes.init();
-});
-
-// Cleanup on page unload
-window.addEventListener("beforeunload", () => {
-  if (window.magnetNotes) {
-    window.magnetNotes.destroy();
-  }
-});
-
 function simulateNewNote() {
   console.log("=== SIMULATING NEW NOTE ===");
 
   // Create a fake note with current timestamp
-  const fakeNote = {
+  var fakeNote = {
     id: "debug_" + Date.now(),
     content:
       '<h1>Debug Test Note</h1><p>This is a simulated note</p><ul><li><input type="checkbox"> Test task</li></ul><p>#jess</p>',
@@ -2233,6 +1550,57 @@ function simulateNewNote() {
   console.log("Fake note added and displayed");
 }
 
+function debugDeleteRequest(noteIndex, noteId) {
+  console.log("=== DELETE REQUEST DEBUG ===");
+
+  if (!fridgeId) {
+    console.error("❌ No fridgeId available!");
+    return;
+  }
+
+  var noteToDelete = allNotes[noteIndex];
+  console.log("Note to delete:", noteToDelete);
+
+  var requestBody = {
+    fridgeId: fridgeId,
+    noteId: noteId || noteToDelete.id || noteToDelete.timestamp,
+    deleteAll: false,
+  };
+
+  console.log("Request body:", JSON.stringify(requestBody, null, 2));
+  console.log(
+    "API URL:",
+    API_BASE + "/api/note?fridgeId=" + encodeURIComponent(fridgeId),
+  );
+  console.log("Method: DELETE");
+
+  // Test the actual request
+  fetch(API_BASE + "/api/note?fridgeId=" + encodeURIComponent(fridgeId), {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  })
+    .then(function (response) {
+      console.log("Delete response status:", response.status);
+      console.log("Delete response ok:", response.ok);
+      return response.text(); // Get raw response
+    })
+    .then(function (text) {
+      console.log("Delete response body:", text);
+      try {
+        var json = JSON.parse(text);
+        console.log("Parsed response:", json);
+      } catch (e) {
+        console.log("Response is not JSON");
+      }
+    })
+    .catch(function (error) {
+      console.error("Delete request failed:", error);
+    });
+}
+
 // CRITICAL: Make functions globally available for onclick handlers
 window.deleteNote = deleteNote;
 window.deleteIndividualNote = deleteIndividualNote;
@@ -2246,26 +1614,15 @@ window.debugCheckboxStates = debugCheckboxStates;
 window.testDeleteFunctions = testDeleteFunctions;
 window.testCheckboxFix = testCheckboxFix;
 window.testManualRefresh = testManualRefresh;
-window.testFixedDeleteRequests = testFixedDeleteRequests;
-// Add all functions to window for console access
-window.debugFirebaseTimestamps = debugFirebaseTimestamps;
-window.testApiResponse = testApiResponse;
-window.testWebhookEndpoint = testWebhookEndpoint;
-window.debugTimestampComparison = debugTimestampComparison;
-window.forceRefreshWithTimestamp = forceRefreshWithTimestamp;
 window.simulateNewNote = simulateNewNote;
 
-console.log("🔧 Added testDeleteFunctions() to console");
-console.log("🔧 Run testFixedDeleteRequests() to verify delete URLs");
-console.log("🔧 Added debugCheckboxStates() function to console");
 console.log("🔧 DEBUG FUNCTIONS LOADED:");
-console.log("• debugFirebaseTimestamps() - Check timestamp formats");
-console.log("• testApiResponse() - Test API response format");
-console.log("• testWebhookEndpoint() - Send test note via webhook");
-console.log("• debugTimestampComparison() - Debug timestamp logic");
-console.log("• forceRefreshWithTimestamp() - Reset and force refresh");
+console.log("• testCheckboxFix() - Test checkbox malformation fixes");
+console.log("• testManualRefresh() - Force fresh API call");
+console.log("• debugCheckboxStates() - Debug checkbox state sync");
+console.log("• testDeleteFunctions() - Verify delete functions exist");
+console.log("• debugDeleteRequest(noteIndex, noteId) - Test delete API call");
 console.log("• simulateNewNote() - Add fake note for testing");
-console.log("Run any of these in browser console to debug the issue!");
-console.log(
-  "🔧 Debug functions available: testCheckboxFix(), testManualRefresh()",
-);
+console.log("Run any of these in browser console to debug!");
+
+console.log("✅ Clean tada.js loaded with fixes and debug support");

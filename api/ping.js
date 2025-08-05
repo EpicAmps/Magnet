@@ -2,41 +2,6 @@
 
 // Default export - API handler function (required by Vercel)
 export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    const { action, data } = req.body;
-    const result = await notifyFridges(action, data);
-    return res.json(result);
-  }
-
-  return res.status(405).json({ error: 'Method not allowed' });
-}
-
-// Named export - notification function for other modules to import
-export async function notifyFridges(action, data) {
-  // For MVP, just log the notifications
-  console.log(`📱 Notification: ${action}`, {
-    message: data.message,
-    fridgeId: data.fridgeId,
-    timestamp: new Date().toISOString()
-  });
-
-  // Later you could add:
-  // - WebSocket notifications
-  // - Push notifications
-  // - Email alerts
-  // - etc.
-
-  return {
-    success: true,
-    action: action,
-    timestamp: Date.now()
-  };
-}
-
-// Add this GET handler to your existing /api/ping.js
-// Keep all your existing notification code, just add this:
-
-export default async function handler(req, res) {
   console.log("=== PING REQUEST ===");
   console.log("Method:", req.method);
 
@@ -49,19 +14,21 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // ADD THIS: Handle EventSource connections (GET requests)
-  if (req.method === 'GET') {
+  // Handle EventSource connections (GET requests)
+  if (req.method === "GET") {
     console.log("🔗 EventSource connection to /api/ping");
 
     res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "Access-Control-Allow-Origin": "*",
     });
 
     // Send initial connection message
-    res.write(`data: {"status":"connected","endpoint":"ping","timestamp":${Date.now()}}\n\n`);
+    res.write(
+      `data: {"status":"connected","endpoint":"ping","timestamp":${Date.now()}}\n\n`,
+    );
 
     // Send periodic heartbeats
     const heartbeat = setInterval(() => {
@@ -69,7 +36,7 @@ export default async function handler(req, res) {
     }, 30000);
 
     // Cleanup on connection close
-    req.on('close', () => {
+    req.on("close", () => {
       console.log("🔌 EventSource connection closed");
       clearInterval(heartbeat);
     });
@@ -77,14 +44,35 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Your existing POST handler for notifications (KEEP THIS AS-IS)
-  if (req.method === 'POST') {
+  // ADD THIS BACK: Your original POST handler for notifications
+  if (req.method === "POST") {
     const { action, data } = req.body;
     const result = await notifyFridges(action, data);
     return res.json(result);
   }
 
-  return res.status(405).json({ error: 'Method not allowed' });
+  // ADD THIS: Handle unsupported methods
+  return res.status(405).json({ error: "Method not allowed" });
 }
 
-// Keep your existing notifyFridges function exactly as-is
+// Named export - notification function for other modules to import
+export async function notifyFridges(action, data) {
+  // For MVP, just log the notifications
+  console.log(`📱 Notification: ${action}`, {
+    message: data.message,
+    fridgeId: data.fridgeId,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Later you could add:
+  // - WebSocket notifications
+  // - Push notifications
+  // - Email alerts
+  // - etc.
+
+  return {
+    success: true,
+    action: action,
+    timestamp: Date.now(),
+  };
+}
