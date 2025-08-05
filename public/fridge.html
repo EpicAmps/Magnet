@@ -1161,6 +1161,205 @@
                     rgba(255, 255, 255, 0.95)
                 );
             }
+
+            /* Time-bound task styles */
+            .due-time,
+            .due-date,
+            .timer,
+            .due-datetime {
+                font-weight: bold;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.9em;
+            }
+
+            .due-time {
+                background: rgba(255, 193, 7, 0.2);
+                color: #856404;
+                border: 1px solid rgba(255, 193, 7, 0.5);
+            }
+
+            .due-date {
+                background: rgba(13, 202, 240, 0.2);
+                color: #055160;
+                border: 1px solid rgba(13, 202, 240, 0.5);
+            }
+
+            .timer {
+                background: rgba(108, 117, 125, 0.2);
+                color: #495057;
+                border: 1px solid rgba(108, 117, 125, 0.5);
+            }
+
+            .due-datetime {
+                background: rgba(220, 53, 69, 0.2);
+                color: #721c24;
+                border: 1px solid rgba(220, 53, 69, 0.5);
+            }
+
+            /* Note status states */
+            .note.upcoming {
+                border-left: 4px solid #0dcaf0;
+                background: linear-gradient(
+                    135deg,
+                    rgba(13, 202, 240, 0.1),
+                    transparent
+                );
+            }
+
+            .note.due-soon {
+                border-left: 4px solid #ffc107;
+                background: linear-gradient(
+                    135deg,
+                    rgba(255, 193, 7, 0.15),
+                    transparent
+                );
+                animation: due-soon-pulse 2s infinite;
+            }
+
+            .note.overdue {
+                border-left: 4px solid #dc3545;
+                background: linear-gradient(
+                    135deg,
+                    rgba(220, 53, 69, 0.2),
+                    rgba(220, 53, 69, 0.05)
+                );
+                box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+            }
+
+            /* Animations */
+            @keyframes due-soon-pulse {
+                0%,
+                100% {
+                    border-left-color: #ffc107;
+                    box-shadow: 0 0 5px rgba(255, 193, 7, 0.3);
+                }
+                50% {
+                    border-left-color: #ffcd39;
+                    box-shadow: 0 0 15px rgba(255, 193, 7, 0.6);
+                }
+            }
+
+            @keyframes urgent-pulse {
+                0%,
+                100% {
+                    transform: scale(1);
+                    box-shadow: 0 0 10px rgba(220, 53, 69, 0.3);
+                }
+                50% {
+                    transform: scale(1.02);
+                    box-shadow: 0 0 20px rgba(220, 53, 69, 0.8);
+                }
+            }
+
+            /* Timer countdown display */
+            .timer-active {
+                position: relative;
+            }
+
+            .timer-active::after {
+                content: attr(data-countdown);
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #dc3545;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.7em;
+                font-weight: bold;
+            }
+
+            /* Status indicators */
+            .status-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 8px;
+            }
+
+            .status-normal {
+                background: #28a745;
+            }
+            .status-upcoming {
+                background: #0dcaf0;
+            }
+            .status-due-soon {
+                background: #ffc107;
+            }
+            .status-overdue {
+                background: #dc3545;
+                animation: blink 1s infinite;
+            }
+
+            @keyframes blink {
+                0%,
+                50% {
+                    opacity: 1;
+                }
+                51%,
+                100% {
+                    opacity: 0.3;
+                }
+            }
+
+            /* Delete button styles */
+            .delete-btn {
+                background: none;
+                border: none;
+                font-size: 1.2em;
+                cursor: pointer;
+                opacity: 0.6;
+                transition: opacity 0.2s;
+                padding: 2px;
+                margin-left: auto;
+            }
+
+            .delete-btn:hover {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+
+            .delete-all-btn {
+                background: #dc3545;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-top: 16px;
+                font-size: 0.9em;
+                transition: background-color 0.2s;
+            }
+
+            .delete-all-btn:hover {
+                background: #c82333;
+            }
+
+            .note-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            @media (max-width: 768px) {
+                .due-time,
+                .due-date,
+                .timer,
+                .due-datetime {
+                    font-size: 0.8em;
+                    padding: 1px 4px;
+                }
+
+                .note.overdue {
+                    box-shadow: 0 0 5px rgba(220, 53, 69, 0.3);
+                }
+            }
         </style>
     </head>
     <body>

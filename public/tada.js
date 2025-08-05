@@ -1717,9 +1717,7 @@ function forceRefreshWithTimestamp() {
   fetchNote();
 }
 
-// Add this to your frontend (index.html or main JS file)
-// Complete fallback system for TBT builds
-
+// Fixed frontend code with correct endpoints and fridgeId handling
 class MagnetNotesManager {
   constructor() {
     this.isTBTBuild =
@@ -1728,14 +1726,31 @@ class MagnetNotesManager {
     this.eventSource = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.fridgeId = this.getFridgeId(); // Get consistent fridgeId
 
     console.log(`🎯 Magnet Notes - ${this.isTBTBuild ? "TBT" : "PROD"} mode`);
+    console.log(`🏠 Fridge ID: ${this.fridgeId}`);
   }
 
-  // Enhanced fetch with fallback
-  async fetchNotes(fridgeId = "default") {
+  // Generate consistent fridgeId
+  getFridgeId() {
+    // Try to get from URL, localStorage, or generate default
+    const urlParams = new URLSearchParams(window.location.search);
+    let fridgeId =
+      urlParams.get("fridgeId") ||
+      localStorage.getItem("magnet_fridgeId") ||
+      "fridge_default";
+
+    // Store for future use
+    localStorage.setItem("magnet_fridgeId", fridgeId);
+    return fridgeId;
+  }
+
+  // Enhanced fetch using your existing /api/note endpoint
+  async fetchNotes() {
     try {
-      const response = await fetch(`/api/webhook?fridgeId=${fridgeId}`, {
+      // Use your existing /api/note endpoint (not webhook!)
+      const response = await fetch(`/api/note?fridgeId=${this.fridgeId}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -1745,14 +1760,13 @@ class MagnetNotesManager {
       }
 
       const data = await response.json();
-      console.log(
-        `📝 Fetched ${data.notes.length} notes (${data.build} build)`,
-      );
+      console.log(`📝 Fetched ${data.notes.length} notes from Firebase`);
 
       // Cache for offline use
-      if (this.isTBTBuild) {
-        localStorage.setItem("magnet_notes_cache", JSON.stringify(data.notes));
-      }
+      localStorage.setItem(
+        `magnet_notes_cache_${this.fridgeId}`,
+        JSON.stringify(data.notes),
+      );
 
       this.updateNotesDisplay(data.notes);
       return data.notes;
@@ -1760,7 +1774,9 @@ class MagnetNotesManager {
       console.error("❌ Error fetching notes:", error);
 
       // Fallback to localStorage cache
-      const cachedNotes = localStorage.getItem("magnet_notes_cache");
+      const cachedNotes = localStorage.getItem(
+        `magnet_notes_cache_${this.fridgeId}`,
+      );
       if (cachedNotes) {
         console.log("📦 Using cached notes");
         const notes = JSON.parse(cachedNotes);
@@ -1768,22 +1784,25 @@ class MagnetNotesManager {
         return notes;
       }
 
-      // Ultimate fallback - empty state
+      // Ultimate fallback - empty state with error message
+      this.showError("Failed to load notes. Check your connection.");
       this.updateNotesDisplay([]);
       return [];
     }
   }
 
-  // Enhanced note creation with fallback
-  async createNote(content, fridgeId = "default") {
+  // Enhanced note creation using /api/webhook (for creation only)
+  async createNote(content) {
     const noteData = {
       content,
-      fridgeId,
+      fridgeId: this.fridgeId,
       fridgeName: "default",
+      body: content, // webhook.js expects 'body' field
       timestamp: new Date().toISOString(),
     };
 
     try {
+      // Use /api/webhook endpoint
       const response = await fetch("/api/webhook", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1791,53 +1810,72 @@ class MagnetNotesManager {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
+        throw new Error(
+          `HTTP ${response.status}: ${errorData.error || "Failed to create note"}`,
+        );
       }
 
       const result = await response.json();
       console.log("✅ Note created successfully:", result);
 
-      // Refresh notes
-      await this.fetchNotes(fridgeId);
+      // Refresh notes after successful creation
+      setTimeout(() => this.fetchNotes(), 500);
       return result;
     } catch (error) {
       console.error("❌ Error creating note:", error);
 
-      // Fallback: Save to localStorage
+      // Fallback: Save to localStorage for TBT builds
       if (this.isTBTBuild) {
         console.log("💾 Saving to localStorage fallback");
-        const cachedNotes = JSON.parse(
-          localStorage.getItem("magnet_notes_cache") || "[]",
-        );
+        const cacheKey = `magnet_notes_cache_${this.fridgeId}`;
+        const cachedNotes = JSON.parse(localStorage.getItem(cacheKey) || "[]");
+
         const newNote = {
           ...noteData,
           id: Date.now().toString(),
           source: "frontend_fallback",
           timeBoundStatus: this.determineTimeBoundStatus(content),
+          timestamp: new Date().toISOString(),
         };
 
         cachedNotes.unshift(newNote);
-        localStorage.setItem("magnet_notes_cache", JSON.stringify(cachedNotes));
+        localStorage.setItem(cacheKey, JSON.stringify(cachedNotes));
         this.updateNotesDisplay(cachedNotes);
 
+        this.showSuccess("Note saved locally (offline mode)");
         return { success: true, noteId: newNote.id, fallback: true };
       }
 
+      this.showError(`Failed to save note: ${error.message}`);
       throw error;
     }
   }
 
-  // EventSource with smart fallback
+  // Smart EventSource connection - try webhook first, fallback to ping
   connectEventSource() {
     if (this.eventSource) {
       this.eventSource.close();
     }
 
-    this.eventSource = new EventSource("/api/webhook");
+    // Try /api/webhook first (full functionality)
+    this.tryEventSourceEndpoint("/api/webhook", () => {
+      // Fallback to /api/ping if webhook fails
+      console.log("🔄 Webhook EventSource failed, trying /api/ping...");
+      this.tryEventSourceEndpoint("/api/ping");
+    });
+  }
+
+  tryEventSourceEndpoint(endpoint, onError = null) {
+    console.log(`🔗 Connecting EventSource to ${endpoint}`);
+    this.eventSource = new EventSource(endpoint);
 
     this.eventSource.onopen = () => {
-      console.log("🔗 SSE Connected");
+      console.log(`🔗 SSE Connected to ${endpoint}`);
       this.reconnectAttempts = 0;
+      this.hideError(); // Clear any connection errors
     };
 
     this.eventSource.onmessage = (event) => {
@@ -1847,77 +1885,162 @@ class MagnetNotesManager {
 
         if (data.type === "note_update") {
           this.fetchNotes();
+        } else if (data.type === "heartbeat") {
+          console.log("💓 Heartbeat received");
+        } else if (data.status === "connected") {
+          console.log(`✅ Connected to ${endpoint}:`, data.message || "Ready");
         }
       } catch (e) {
-        console.log("📡 SSE Raw:", event.data);
+        console.log("📡 SSE Raw message:", event.data);
       }
     };
 
-    this.eventSource.onerror = () => {
-      console.log(`❌ SSE Error (attempt ${this.reconnectAttempts + 1})`);
+    this.eventSource.onerror = (event) => {
+      console.log(
+        `❌ SSE Error on ${endpoint} (attempt ${this.reconnectAttempts + 1})`,
+        event,
+      );
       this.eventSource.close();
 
+      // If we have a fallback and this is the first endpoint, try fallback
+      if (onError && this.reconnectAttempts === 0) {
+        onError();
+        return;
+      }
+
+      // Otherwise use normal reconnection logic
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         const delay = Math.min(
           1000 * Math.pow(2, this.reconnectAttempts),
           30000,
         );
+        console.log(`🔄 Reconnecting to ${endpoint} in ${delay}ms...`);
+
         setTimeout(() => {
           this.reconnectAttempts++;
-          this.connectEventSource();
+          this.tryEventSourceEndpoint(endpoint);
         }, delay);
       } else {
         console.log("🔄 Max reconnection attempts reached. Starting polling.");
+        this.showWarning("Real-time updates unavailable. Using polling mode.");
         this.startPolling();
       }
     };
   }
 
-  // Polling fallback
+  // Polling fallback with better interval
   startPolling() {
-    setInterval(() => {
+    this.pollingInterval = setInterval(() => {
+      console.log("📊 Polling for updates...");
       this.fetchNotes();
-    }, 10000); // Poll every 10 seconds
+    }, 15000); // Poll every 15 seconds
   }
 
-  // Time-bound status detection (client-side)
-  determineTimeBoundStatus(content) {
-    const now = new Date();
-
-    // Check for urgent indicators
-    if (content.match(/@(urgent|critical|asap)/i)) {
-      return "urgent";
+  // Stop polling when EventSource reconnects
+  stopPolling() {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     }
+  }
 
-    // Check for time patterns
-    const timeMatch = content.match(/@\d{1,2}(:\d{2})?(am|pm)/i);
-    const dateMatch = content.match(
-      /@(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2})/i,
-    );
+  // Delete note using your existing /api/note DELETE endpoint
+  async deleteNote(noteId) {
+    try {
+      const response = await fetch("/api/note", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fridgeId: this.fridgeId,
+          noteId: noteId,
+        }),
+      });
 
-    if (timeMatch || dateMatch) {
-      // Quick status determination
-      if (content.includes("@today") || timeMatch) {
-        return "due-soon";
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return "upcoming";
+
+      const result = await response.json();
+      console.log("🗑️ Note deleted successfully:", result);
+
+      // Refresh notes after successful deletion
+      setTimeout(() => this.fetchNotes(), 500);
+      this.showSuccess("Note deleted!");
+      return result;
+    } catch (error) {
+      console.error("❌ Error deleting note:", error);
+      this.showError(`Failed to delete note: ${error.message}`);
+      throw error;
+    }
+  }
+
+  // Delete all notes using your existing /api/note DELETE endpoint
+  async deleteAllNotes() {
+    if (
+      !confirm(
+        "Are you sure you want to delete ALL notes? This cannot be undone.",
+      )
+    ) {
+      return;
     }
 
-    if (content.match(/@\d+(min|hr|hour|sec)/i)) {
-      return "timer";
-    }
+    try {
+      const response = await fetch("/api/note", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fridgeId: this.fridgeId,
+          deleteAll: true,
+        }),
+      });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("🗑️ All notes deleted:", result);
+
+      // Clear cache and refresh display
+      localStorage.removeItem(`magnet_notes_cache_${this.fridgeId}`);
+      this.fetchNotes();
+      this.showSuccess(`Deleted ${result.deletedCount} notes`);
+      return result;
+    } catch (error) {
+      console.error("❌ Error deleting all notes:", error);
+      this.showError(`Failed to delete notes: ${error.message}`);
+      throw error;
+    }
+  }
+  determineTimeBoundStatus(content) {
+    if (content.match(/@(urgent|critical|asap)/i)) return "urgent";
+    if (content.match(/@\d{1,2}(:\d{2})?(am|pm)/i)) return "due-soon";
+    if (content.match(/@(tomorrow|today)/i)) return "upcoming";
+    if (content.match(/@\d+(min|hr|hour|sec)/i)) return "timer";
     return "normal";
   }
 
-  // Enhanced display with time-bound states
+  // Enhanced display with better error handling
   updateNotesDisplay(notes) {
     const notesContainer =
-      document.getElementById("notes-container") || document.body;
+      document.getElementById("notes-container") ||
+      document.querySelector(".notes") ||
+      document.body;
 
-    // Clear existing notes
+    // Remove existing notes
     const existingNotes = notesContainer.querySelectorAll(".note");
     existingNotes.forEach((note) => note.remove());
+
+    if (notes.length === 0) {
+      const emptyMessage = document.createElement("div");
+      emptyMessage.className = "empty-state";
+      emptyMessage.innerHTML = `
+        <p>No notes yet for this fridge.</p>
+        <p><small>Fridge ID: ${this.fridgeId}</small></p>
+      `;
+      notesContainer.appendChild(emptyMessage);
+      return;
+    }
 
     notes.forEach((note) => {
       const noteElement = document.createElement("div");
@@ -1931,16 +2054,19 @@ class MagnetNotesManager {
         noteElement.classList.add(`status-${status}`);
       }
 
+      // Format timestamp
+      const timestamp = new Date(note.timestamp).toLocaleString();
+
       // Create note content
       noteElement.innerHTML = `
         <div class="note-header">
           <span class="status-indicator status-${status}"></span>
-          <span class="note-timestamp">${new Date(note.timestamp).toLocaleString()}</span>
+          <span class="note-timestamp">${timestamp}</span>
+          ${note.source === "frontend_fallback" ? '<span class="offline-badge">📱</span>' : ""}
         </div>
         <div class="note-content">${note.content}</div>
       `;
 
-      // Add to container
       notesContainer.appendChild(noteElement);
 
       // Trigger animations for urgent notes
@@ -1949,19 +2075,56 @@ class MagnetNotesManager {
       }
     });
 
-    console.log(`🎨 Displayed ${notes.length} notes`);
+    console.log(
+      `🎨 Displayed ${notes.length} notes for fridge ${this.fridgeId}`,
+    );
+  }
+
+  // UI feedback methods
+  showError(message) {
+    this.showMessage(message, "error");
+  }
+
+  showSuccess(message) {
+    this.showMessage(message, "success");
+  }
+
+  showWarning(message) {
+    this.showMessage(message, "warning");
+  }
+
+  hideError() {
+    const existing = document.querySelector(".status-message");
+    if (existing) existing.remove();
+  }
+
+  showMessage(message, type = "info") {
+    // Remove existing messages
+    this.hideError();
+
+    const messageEl = document.createElement("div");
+    messageEl.className = `status-message status-${type}`;
+    messageEl.textContent = message;
+
+    // Insert at top of page
+    document.body.insertBefore(messageEl, document.body.firstChild);
+
+    // Auto-hide success messages
+    if (type === "success") {
+      setTimeout(() => messageEl.remove(), 3000);
+    }
   }
 
   triggerUrgentAlert(noteElement) {
     noteElement.style.animation = "urgent-pulse 2s infinite";
 
-    // Optional: Sound alert (respects user preferences)
-    if (!document.hidden) {
+    // Respect user preferences for sound
+    if (!document.hidden && !localStorage.getItem("magnet_mute_alerts")) {
       try {
         const audio = new Audio(
-          "data:audio/wav;base64,UklGRnoDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVYDAABQAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAD//wAA//8AAP//AAD//wAA",
+          "data:audio/wav;base64,UklGRnoDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVYDAAA=",
         );
-        audio.volume = 0.3;
+        audio.volume = 0.2;
         audio.play().catch(() => {}); // Ignore if fails
       } catch (e) {}
     }
@@ -1971,24 +2134,63 @@ class MagnetNotesManager {
   init() {
     console.log("🚀 Initializing Magnet Notes Manager");
 
-    // Start connection
-    this.connectEventSource();
-
-    // Initial fetch
+    // Start with initial fetch
     this.fetchNotes();
 
+    // Then start real-time connection
+    setTimeout(() => this.connectEventSource(), 1000);
+
     // Setup form handler if exists
-    const noteForm = document.getElementById("note-form");
+    const noteForm =
+      document.getElementById("note-form") || document.querySelector("form");
     if (noteForm) {
       noteForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const content = e.target.content.value.trim();
-        if (content) {
-          await this.createNote(content);
-          e.target.content.value = "";
+        const contentInput =
+          e.target.content ||
+          e.target.querySelector('input[type="text"], textarea');
+        if (contentInput) {
+          const content = contentInput.value.trim();
+          if (content) {
+            try {
+              await this.createNote(content);
+              contentInput.value = "";
+              this.showSuccess("Note saved!");
+            } catch (error) {
+              // Error already shown in createNote
+            }
+          }
         }
       });
     }
+
+    // Setup debug commands for development
+    if (this.isTBTBuild) {
+      window.debugMagnet = () => {
+        console.log("🔍 Debug Info:");
+        console.log("- Build:", this.isTBTBuild ? "TBT" : "PROD");
+        console.log("- Fridge ID:", this.fridgeId);
+        console.log("- EventSource State:", this.eventSource?.readyState);
+        console.log(
+          "- Cache:",
+          localStorage.getItem(`magnet_notes_cache_${this.fridgeId}`),
+        );
+      };
+
+      window.clearCache = () => {
+        localStorage.removeItem(`magnet_notes_cache_${this.fridgeId}`);
+        console.log("🗑️ Cache cleared");
+        this.fetchNotes();
+      };
+    }
+  }
+
+  // Cleanup on page unload
+  destroy() {
+    if (this.eventSource) {
+      this.eventSource.close();
+    }
+    this.stopPolling();
   }
 }
 
@@ -1998,15 +2200,12 @@ document.addEventListener("DOMContentLoaded", () => {
   window.magnetNotes.init();
 });
 
-// Expose for debugging
-if (window.location.hostname.includes("localhost")) {
-  window.debugMagnet = () => {
-    console.log("🔍 Debug Info:");
-    console.log("- Build:", window.magnetNotes.isTBTBuild ? "TBT" : "PROD");
-    console.log("- EventSource:", window.magnetNotes.eventSource?.readyState);
-    console.log("- Cache:", localStorage.getItem("magnet_notes_cache"));
-  };
-}
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  if (window.magnetNotes) {
+    window.magnetNotes.destroy();
+  }
+});
 
 function simulateNewNote() {
   console.log("=== SIMULATING NEW NOTE ===");
