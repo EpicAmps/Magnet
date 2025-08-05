@@ -1,6 +1,67 @@
 // tada.js - Clean version with API polling, fixes, and debug
 "use strict";
 
+console.log("🔍 DEBUGGING FRIDGE ID ISSUE");
+console.log("Current URL:", window.location.href);
+console.log("URL search params:", window.location.search);
+console.log("URL pathname:", window.location.pathname);
+console.log("Hostname:", window.location.hostname);
+
+// Check what getFromPath() returns
+function debugGetFromPath() {
+  var pathParts = window.location.pathname.split("/");
+  console.log("Path parts:", pathParts);
+
+  if (pathParts.length >= 3 && pathParts[1] === "fridge") {
+    console.log("Found fridge path, returning:", pathParts[2]);
+    return pathParts[2];
+  }
+  console.log("No fridge path found");
+  return null;
+}
+
+// Check localStorage
+console.log("localStorage fridgeId:", localStorage.getItem("fridgeId"));
+console.log("localStorage fridgeName:", localStorage.getItem("fridgeName"));
+
+// Test URL params
+var debugUrlParams = new URLSearchParams(window.location.search);
+console.log("URL param 'id':", debugUrlParams.get("id"));
+console.log("URL param 'fridgeId':", debugUrlParams.get("fridgeId"));
+
+// Test the path function
+console.log("getFromPath() returns:", debugGetFromPath());
+
+// Check if we're on TBT
+var isTBT =
+  window.location.hostname.includes("tbt") ||
+  window.location.hostname.includes("localhost");
+console.log("Is TBT build?", isTBT);
+
+// Now let's see what fridgeId gets set to
+var testFridgeId =
+  debugUrlParams.get("id") ||
+  debugGetFromPath() ||
+  localStorage.getItem("fridgeId");
+console.log("Initial fridgeId would be:", testFridgeId);
+
+// Apply TBT fallback
+if (!testFridgeId && isTBT) {
+  testFridgeId = "fridge_tbt_test";
+  console.log("Applied TBT fallback, fridgeId now:", testFridgeId);
+}
+
+console.log("🎯 FINAL fridgeId should be:", testFridgeId);
+console.log("🎯 Is fridgeId truthy?", !!testFridgeId);
+
+// If it's still null, force set it
+if (!testFridgeId) {
+  console.log("⚠️ fridgeId is still null, forcing TBT default");
+  localStorage.setItem("fridgeId", "fridge_tbt_test");
+  localStorage.setItem("fridgeName", "tbt-test");
+  console.log("Forced values set in localStorage");
+}
+
 // Variables
 var eventSource = null;
 var lastUpdate = 0;
