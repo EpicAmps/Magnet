@@ -226,3 +226,8 @@ async function cleanupOldNotes(fridgeId) {
     console.log(`Cleaned up ${notesToDelete.length} old notes`);
   }
 }
+// Detect: @2pm, @tomorrow, @friday, @2025-08-15
+content = content.replace(
+  /(@\d{1,2}(:\d{2})?(am|pm))/gi,
+  '<span class="due-time">$1</span>',
+);
