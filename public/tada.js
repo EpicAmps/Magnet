@@ -1542,9 +1542,9 @@ function debugFirebaseTimestamps() {
         id: note.id,
         timestamp: note.timestamp,
         timestampType: typeof note.timestamp,
-        isNumber: typeof note.timestamp === 'number',
+        isNumber: typeof note.timestamp === "number",
         asDate: new Date(note.timestamp),
-        readable: new Date(note.timestamp).toISOString()
+        readable: new Date(note.timestamp).toISOString(),
       });
     });
   }
@@ -1553,7 +1553,7 @@ function debugFirebaseTimestamps() {
     value: lastUpdate,
     type: typeof lastUpdate,
     asDate: new Date(lastUpdate),
-    readable: new Date(lastUpdate).toISOString()
+    readable: new Date(lastUpdate).toISOString(),
   });
 }
 
@@ -1561,16 +1561,17 @@ function testApiResponse() {
   console.log("=== API RESPONSE TEST ===");
   console.log("Making fresh API call to debug response format...");
 
-  const testUrl = API_BASE + "/api/note?fridgeId=" + fridgeId + "&debug=1&t=" + Date.now();
+  const testUrl =
+    API_BASE + "/api/note?fridgeId=" + fridgeId + "&debug=1&t=" + Date.now();
   console.log("Test URL:", testUrl);
 
   fetch(testUrl)
-    .then(response => {
+    .then((response) => {
       console.log("Response status:", response.status);
       console.log("Response headers:", response.headers);
       return response.json();
     })
-    .then(data => {
+    .then((data) => {
       console.log("=== RAW API RESPONSE ===");
       console.log("Full response:", JSON.stringify(data, null, 2));
 
@@ -1584,23 +1585,33 @@ function testApiResponse() {
           console.log("Timestamp analysis:", {
             timestamp: firstNote.timestamp,
             type: typeof firstNote.timestamp,
-            isNumber: typeof firstNote.timestamp === 'number',
-            isFirestoreTimestamp: firstNote.timestamp && typeof firstNote.timestamp === 'object' && firstNote.timestamp.toMillis,
+            isNumber: typeof firstNote.timestamp === "number",
+            isFirestoreTimestamp:
+              firstNote.timestamp &&
+              typeof firstNote.timestamp === "object" &&
+              firstNote.timestamp.toMillis,
             currentTime: Date.now(),
-            comparison: firstNote.timestamp > lastUpdate
+            comparison: firstNote.timestamp > lastUpdate,
           });
 
           // Test if it's a Firestore timestamp object
-          if (firstNote.timestamp && typeof firstNote.timestamp === 'object' && firstNote.timestamp.toMillis) {
+          if (
+            firstNote.timestamp &&
+            typeof firstNote.timestamp === "object" &&
+            firstNote.timestamp.toMillis
+          ) {
             console.log("🔥 FOUND FIRESTORE TIMESTAMP OBJECT!");
-            console.log("Converting with toMillis():", firstNote.timestamp.toMillis());
+            console.log(
+              "Converting with toMillis():",
+              firstNote.timestamp.toMillis(),
+            );
           }
         }
       }
 
       console.log("Current lastUpdate for comparison:", lastUpdate);
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("API test failed:", error);
     });
 }
@@ -1611,7 +1622,7 @@ function testWebhookEndpoint() {
   const testData = {
     fridgeId: fridgeId,
     content: "Debug test note\n\n- [ ] Test task 1\n- [ ] Test task 2\n\n#jess",
-    sender: "Debug Test"
+    sender: "Debug Test",
   };
 
   console.log("Sending test data to webhook:", testData);
@@ -1619,38 +1630,38 @@ function testWebhookEndpoint() {
   fetch(API_BASE + "/api/webhook", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
-    body: JSON.stringify(testData)
+    body: JSON.stringify(testData),
   })
-  .then(response => {
-    console.log("Webhook response status:", response.status);
-    return response.text();
-  })
-  .then(text => {
-    console.log("Webhook response text:", text);
-    try {
-      const json = JSON.parse(text);
-      console.log("Webhook response JSON:", json);
+    .then((response) => {
+      console.log("Webhook response status:", response.status);
+      return response.text();
+    })
+    .then((text) => {
+      console.log("Webhook response text:", text);
+      try {
+        const json = JSON.parse(text);
+        console.log("Webhook response JSON:", json);
 
-      if (json.success) {
-        console.log("✅ Webhook test successful!");
-        console.log("Note ID:", json.noteId);
-        console.log("Waiting 3 seconds then fetching notes...");
+        if (json.success) {
+          console.log("✅ Webhook test successful!");
+          console.log("Note ID:", json.noteId);
+          console.log("Waiting 3 seconds then fetching notes...");
 
-        setTimeout(() => {
-          testApiResponse();
-        }, 3000);
-      } else {
-        console.log("❌ Webhook test failed:", json.error);
+          setTimeout(() => {
+            testApiResponse();
+          }, 3000);
+        } else {
+          console.log("❌ Webhook test failed:", json.error);
+        }
+      } catch (e) {
+        console.log("Response is not JSON");
       }
-    } catch (e) {
-      console.log("Response is not JSON");
-    }
-  })
-  .catch(error => {
-    console.error("Webhook test failed:", error);
-  });
+    })
+    .catch((error) => {
+      console.error("Webhook test failed:", error);
+    });
 }
 
 function debugTimestampComparison() {
@@ -1682,7 +1693,7 @@ function debugTimestampComparison() {
   });
 
   // If timestamps seem wrong, suggest fixes
-  if (typeof latestNote.timestamp !== 'number') {
+  if (typeof latestNote.timestamp !== "number") {
     console.log("🔥 PROBLEM: Note timestamp is not a number!");
     console.log("Note timestamp:", latestNote.timestamp);
 
@@ -1706,18 +1717,310 @@ function forceRefreshWithTimestamp() {
   fetchNote();
 }
 
+// Add this to your frontend (index.html or main JS file)
+// Complete fallback system for TBT builds
+
+class MagnetNotesManager {
+  constructor() {
+    this.isTBTBuild =
+      window.location.hostname.includes("tbt") ||
+      window.location.hostname.includes("localhost");
+    this.eventSource = null;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+
+    console.log(`🎯 Magnet Notes - ${this.isTBTBuild ? "TBT" : "PROD"} mode`);
+  }
+
+  // Enhanced fetch with fallback
+  async fetchNotes(fridgeId = "default") {
+    try {
+      const response = await fetch(`/api/webhook?fridgeId=${fridgeId}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(
+        `📝 Fetched ${data.notes.length} notes (${data.build} build)`,
+      );
+
+      // Cache for offline use
+      if (this.isTBTBuild) {
+        localStorage.setItem("magnet_notes_cache", JSON.stringify(data.notes));
+      }
+
+      this.updateNotesDisplay(data.notes);
+      return data.notes;
+    } catch (error) {
+      console.error("❌ Error fetching notes:", error);
+
+      // Fallback to localStorage cache
+      const cachedNotes = localStorage.getItem("magnet_notes_cache");
+      if (cachedNotes) {
+        console.log("📦 Using cached notes");
+        const notes = JSON.parse(cachedNotes);
+        this.updateNotesDisplay(notes);
+        return notes;
+      }
+
+      // Ultimate fallback - empty state
+      this.updateNotesDisplay([]);
+      return [];
+    }
+  }
+
+  // Enhanced note creation with fallback
+  async createNote(content, fridgeId = "default") {
+    const noteData = {
+      content,
+      fridgeId,
+      fridgeName: "default",
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch("/api/webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(noteData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Note created successfully:", result);
+
+      // Refresh notes
+      await this.fetchNotes(fridgeId);
+      return result;
+    } catch (error) {
+      console.error("❌ Error creating note:", error);
+
+      // Fallback: Save to localStorage
+      if (this.isTBTBuild) {
+        console.log("💾 Saving to localStorage fallback");
+        const cachedNotes = JSON.parse(
+          localStorage.getItem("magnet_notes_cache") || "[]",
+        );
+        const newNote = {
+          ...noteData,
+          id: Date.now().toString(),
+          source: "frontend_fallback",
+          timeBoundStatus: this.determineTimeBoundStatus(content),
+        };
+
+        cachedNotes.unshift(newNote);
+        localStorage.setItem("magnet_notes_cache", JSON.stringify(cachedNotes));
+        this.updateNotesDisplay(cachedNotes);
+
+        return { success: true, noteId: newNote.id, fallback: true };
+      }
+
+      throw error;
+    }
+  }
+
+  // EventSource with smart fallback
+  connectEventSource() {
+    if (this.eventSource) {
+      this.eventSource.close();
+    }
+
+    this.eventSource = new EventSource("/api/webhook");
+
+    this.eventSource.onopen = () => {
+      console.log("🔗 SSE Connected");
+      this.reconnectAttempts = 0;
+    };
+
+    this.eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📡 SSE Message:", data);
+
+        if (data.type === "note_update") {
+          this.fetchNotes();
+        }
+      } catch (e) {
+        console.log("📡 SSE Raw:", event.data);
+      }
+    };
+
+    this.eventSource.onerror = () => {
+      console.log(`❌ SSE Error (attempt ${this.reconnectAttempts + 1})`);
+      this.eventSource.close();
+
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        const delay = Math.min(
+          1000 * Math.pow(2, this.reconnectAttempts),
+          30000,
+        );
+        setTimeout(() => {
+          this.reconnectAttempts++;
+          this.connectEventSource();
+        }, delay);
+      } else {
+        console.log("🔄 Max reconnection attempts reached. Starting polling.");
+        this.startPolling();
+      }
+    };
+  }
+
+  // Polling fallback
+  startPolling() {
+    setInterval(() => {
+      this.fetchNotes();
+    }, 10000); // Poll every 10 seconds
+  }
+
+  // Time-bound status detection (client-side)
+  determineTimeBoundStatus(content) {
+    const now = new Date();
+
+    // Check for urgent indicators
+    if (content.match(/@(urgent|critical|asap)/i)) {
+      return "urgent";
+    }
+
+    // Check for time patterns
+    const timeMatch = content.match(/@\d{1,2}(:\d{2})?(am|pm)/i);
+    const dateMatch = content.match(
+      /@(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2})/i,
+    );
+
+    if (timeMatch || dateMatch) {
+      // Quick status determination
+      if (content.includes("@today") || timeMatch) {
+        return "due-soon";
+      }
+      return "upcoming";
+    }
+
+    if (content.match(/@\d+(min|hr|hour|sec)/i)) {
+      return "timer";
+    }
+
+    return "normal";
+  }
+
+  // Enhanced display with time-bound states
+  updateNotesDisplay(notes) {
+    const notesContainer =
+      document.getElementById("notes-container") || document.body;
+
+    // Clear existing notes
+    const existingNotes = notesContainer.querySelectorAll(".note");
+    existingNotes.forEach((note) => note.remove());
+
+    notes.forEach((note) => {
+      const noteElement = document.createElement("div");
+      noteElement.className = "note";
+      noteElement.setAttribute("data-note-id", note.id);
+
+      // Add time-bound status class
+      const status =
+        note.timeBoundStatus || this.determineTimeBoundStatus(note.content);
+      if (status !== "normal") {
+        noteElement.classList.add(`status-${status}`);
+      }
+
+      // Create note content
+      noteElement.innerHTML = `
+        <div class="note-header">
+          <span class="status-indicator status-${status}"></span>
+          <span class="note-timestamp">${new Date(note.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="note-content">${note.content}</div>
+      `;
+
+      // Add to container
+      notesContainer.appendChild(noteElement);
+
+      // Trigger animations for urgent notes
+      if (status === "overdue" || status === "urgent") {
+        this.triggerUrgentAlert(noteElement);
+      }
+    });
+
+    console.log(`🎨 Displayed ${notes.length} notes`);
+  }
+
+  triggerUrgentAlert(noteElement) {
+    noteElement.style.animation = "urgent-pulse 2s infinite";
+
+    // Optional: Sound alert (respects user preferences)
+    if (!document.hidden) {
+      try {
+        const audio = new Audio(
+          "data:audio/wav;base64,UklGRnoDAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YVYDAABQAAAAAAAAAAAAAAEBAAAAAAAAAAAAAAD//wAA//8AAP//AAD//wAA",
+        );
+        audio.volume = 0.3;
+        audio.play().catch(() => {}); // Ignore if fails
+      } catch (e) {}
+    }
+  }
+
+  // Initialize everything
+  init() {
+    console.log("🚀 Initializing Magnet Notes Manager");
+
+    // Start connection
+    this.connectEventSource();
+
+    // Initial fetch
+    this.fetchNotes();
+
+    // Setup form handler if exists
+    const noteForm = document.getElementById("note-form");
+    if (noteForm) {
+      noteForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const content = e.target.content.value.trim();
+        if (content) {
+          await this.createNote(content);
+          e.target.content.value = "";
+        }
+      });
+    }
+  }
+}
+
+// Auto-initialize when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  window.magnetNotes = new MagnetNotesManager();
+  window.magnetNotes.init();
+});
+
+// Expose for debugging
+if (window.location.hostname.includes("localhost")) {
+  window.debugMagnet = () => {
+    console.log("🔍 Debug Info:");
+    console.log("- Build:", window.magnetNotes.isTBTBuild ? "TBT" : "PROD");
+    console.log("- EventSource:", window.magnetNotes.eventSource?.readyState);
+    console.log("- Cache:", localStorage.getItem("magnet_notes_cache"));
+  };
+}
+
 function simulateNewNote() {
   console.log("=== SIMULATING NEW NOTE ===");
 
   // Create a fake note with current timestamp
   const fakeNote = {
     id: "debug_" + Date.now(),
-    content: "<h1>Debug Test Note</h1><p>This is a simulated note</p><ul><li><input type=\"checkbox\"> Test task</li></ul><p>#jess</p>",
+    content:
+      '<h1>Debug Test Note</h1><p>This is a simulated note</p><ul><li><input type="checkbox"> Test task</li></ul><p>#jess</p>',
     timestamp: Date.now(),
     fridgeId: fridgeId,
     fridgeName: fridgeName,
     source: "debug",
-    tags: ["jess"]
+    tags: ["jess"],
   };
 
   console.log("Adding fake note:", fakeNote);
@@ -1730,10 +2033,6 @@ function simulateNewNote() {
 
   console.log("Fake note added and displayed");
 }
-
-
-
-
 
 // CRITICAL: Make functions globally available for onclick handlers
 window.deleteNote = deleteNote;
