@@ -1,28 +1,10 @@
-// api/note.js - Clean Firebase version WITHOUT frontend code
-import { initializeApp } from "firebase/app";
+// api/note.js - REST Firestore variant
 import {
-  getFirestore,
-  collection,
-  getDocs,
-  deleteDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore";
-
-// Initialize Firebase (same config as webhook)
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+  fetchNotesForFridge,
+  deleteNotesByFridge,
+  deleteNoteById,
+  findNotesByTimestamp,
+} from "./firestore-client.js";
 
 export default async function handler(req, res) {
   console.log("=== NOTE API REQUEST ===");
@@ -49,20 +31,11 @@ export default async function handler(req, res) {
     if (req.method === "GET") {
       console.log("GET request for fridgeId:", fridgeId);
 
-      const notesQuery = query(
-        collection(db, "notes"),
-        where("fridgeId", "==", fridgeId),
-        orderBy("timestamp", "desc"),
+      const notes = await fetchNotesForFridge(fridgeId, { limit: 25 });
+
+      console.log(
+        `Retrieved ${notes.length} notes for fridge: ${fridgeId}`,
       );
-
-      const snapshot = await getDocs(notesQuery);
-      const notes = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp.toMillis(), // Convert Firestore timestamp
-      }));
-
-      console.log(`Retrieved ${notes.length} notes for fridge: ${fridgeId}`);
 
       return res.status(200).json({
         notes,
@@ -92,35 +65,19 @@ export default async function handler(req, res) {
 
       if (deleteAll) {
         console.log("Deleting all notes for fridge:", fridgeId);
-
-        // Delete all notes for this fridge
-        const notesQuery = query(
-          collection(db, "notes"),
-          where("fridgeId", "==", fridgeId),
-        );
-
-        const snapshot = await getDocs(notesQuery);
-        console.log("Found", snapshot.docs.length, "notes to delete");
-
-        const deletePromises = snapshot.docs.map((doc) => {
-          console.log("Deleting note:", doc.id);
-          return deleteDoc(doc.ref);
-        });
-
-        await Promise.all(deletePromises);
-        console.log("Successfully deleted all notes");
+        const deletedCount = await deleteNotesByFridge(fridgeId);
+        console.log("Successfully deleted", deletedCount, "notes");
 
         return res.status(200).json({
           success: true,
-          message: `Deleted ${snapshot.docs.length} notes`,
-          deletedCount: snapshot.docs.length,
+          message: `Deleted ${deletedCount} notes`,
+          deletedCount,
         });
       } else if (noteId) {
         console.log("Deleting individual note:", noteId);
 
         try {
-          // Try to delete by document ID first
-          await deleteDoc(doc(db, "notes", noteId));
+          await deleteNoteById(noteId);
           console.log("Successfully deleted note by ID:", noteId);
 
           return res.status(200).json({
@@ -129,27 +86,24 @@ export default async function handler(req, res) {
             noteId: noteId,
           });
         } catch (error) {
-          console.log(
-            "Failed to delete by ID, trying by timestamp:",
-            error.message,
-          );
+          console.log("Delete by ID failed, trying timestamp fallback.");
 
-          // If that fails, try to find and delete by timestamp
-          const notesQuery = query(
-            collection(db, "notes"),
-            where("fridgeId", "==", fridgeId),
-            where("timestamp", "==", parseInt(noteId)),
-          );
+          const targetTimestamp = Number(noteId);
+          if (Number.isNaN(targetTimestamp)) {
+            console.log("Note identifier is not a timestamp, rethrowing");
+            throw error;
+          }
 
-          const snapshot = await getDocs(notesQuery);
+          const matches = await findNotesByTimestamp(fridgeId, targetTimestamp);
 
-          if (snapshot.empty) {
+          if (!matches.length) {
             console.log("No note found with timestamp:", noteId);
             return res.status(404).json({ error: "Note not found" });
           }
 
-          const deletePromises = snapshot.docs.map((doc) => deleteDoc(doc.ref));
-          await Promise.all(deletePromises);
+          await Promise.all(
+            matches.map((note) => deleteNoteById(note.id).catch(() => {})),
+          );
 
           console.log("Successfully deleted note by timestamp:", noteId);
 

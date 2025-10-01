@@ -1,17 +1,10 @@
 // api/webhook.js - Integrated with Time-Bound Tasks + TBT Build Support
-import { initializeApp } from "firebase/app";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  deleteDoc,
-  Timestamp,
-} from "firebase/firestore";
 import { marked } from "marked";
+import {
+  createNoteDocument,
+  cleanupOldNotes,
+  fetchNotesForFridge,
+} from "./firestore-client.js";
 
 // Configure marked
 marked.setOptions({
@@ -25,29 +18,6 @@ const isTBTBuild =
   process.env.VERCEL_GIT_COMMIT_REF?.includes("tbt") ||
   process.env.VERCEL_URL?.includes("tbt") ||
   process.env.NODE_ENV === "development";
-
-// Initialize Firebase (skip for TBT builds if needed)
-let db;
-try {
-  if (!isTBTBuild) {
-    const firebaseConfig = {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID,
-    };
-
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    console.log("✅ Firebase initialized successfully");
-  } else {
-    console.log("🔧 TBT Build - Skipping Firebase initialization");
-  }
-} catch (error) {
-  console.error("❌ Firebase initialization failed:", error);
-}
 
 // TBT Build Storage (in-memory fallback)
 class TBTStorage {
@@ -65,7 +35,7 @@ class TBTStorage {
   async getNotes(fridgeId) {
     return Array.from(this.notes.values())
       .filter((note) => note.fridgeId === fridgeId)
-      .sort((a, b) => b.timestamp.seconds - a.timestamp.seconds)
+      .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 10);
   }
 }
@@ -124,22 +94,7 @@ export default async function handler(req, res) {
       if (isTBTBuild) {
         notes = await tbtStorage.getNotes(fridgeId);
       } else {
-        if (!db) {
-          return res.status(500).json({ error: "Firebase not initialized" });
-        }
-
-        const notesQuery = query(
-          collection(db, "notes"),
-          where("fridgeId", "==", fridgeId),
-          orderBy("timestamp", "desc"),
-        );
-
-        const snapshot = await getDocs(notesQuery);
-        notes = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp.toDate().toISOString(),
-        }));
+        notes = await fetchNotesForFridge(fridgeId, { limit: 25 });
       }
 
       return res.status(200).json({
@@ -159,10 +114,6 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  if (!isTBTBuild && !db) {
-    return res.status(500).json({ error: "Firebase not initialized" });
   }
 
   try {
@@ -281,15 +232,14 @@ export default async function handler(req, res) {
     // Create note data with Firestore Timestamp
     const noteData = {
       content: formattedContent,
-      timestamp: isTBTBuild
-        ? { seconds: Math.floor(Date.now() / 1000) }
-        : Timestamp.now(),
+      timestamp: Date.now(),
       fridgeId,
       fridgeName,
       source: "ios_shortcut",
       tags: tags,
       timeBoundStatus,
       hasTimeElements: timeBoundStatus !== "normal",
+      sender: body.sender || "iPhone",
     };
 
     // Save to storage
@@ -297,7 +247,8 @@ export default async function handler(req, res) {
     if (isTBTBuild) {
       docRef = await tbtStorage.addNote(noteData);
     } else {
-      docRef = await addDoc(collection(db, "notes"), noteData);
+      const created = await createNoteDocument(noteData);
+      docRef = { id: created.id };
     }
 
     console.log("✅ Note saved successfully with ID:", docRef.id);
@@ -305,7 +256,10 @@ export default async function handler(req, res) {
     // Cleanup old notes (only for Firebase)
     if (!isTBTBuild) {
       try {
-        await cleanupOldNotes(fridgeId);
+        const removed = await cleanupOldNotes(fridgeId, 10);
+        if (removed) {
+          console.log(`🧹 Cleaned up ${removed} old notes`);
+        }
       } catch (cleanupError) {
         console.log("⚠️ Cleanup failed (non-critical):", cleanupError.message);
       }
@@ -499,23 +453,4 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
   }
 
   return targetDate;
-}
-
-async function cleanupOldNotes(fridgeId) {
-  const notesQuery = query(
-    collection(db, "notes"),
-    where("fridgeId", "==", fridgeId),
-    orderBy("timestamp", "desc"),
-  );
-
-  const snapshot = await getDocs(notesQuery);
-  const notes = snapshot.docs;
-
-  if (notes.length > 10) {
-    const notesToDelete = notes.slice(10);
-    for (const noteDoc of notesToDelete) {
-      await deleteDoc(noteDoc.ref);
-    }
-    console.log(`Cleaned up ${notesToDelete.length} old notes`);
-  }
 }
