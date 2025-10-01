@@ -1,25 +1,22 @@
 // api/webhook.js - Integrated with Time-Bound Tasks + TBT Build Support
 import { marked } from "marked";
-import {
-  createNoteDocument,
-  cleanupOldNotes,
-  fetchNotesForFridge,
-} from "./firestore-client.js";
+import { appendNote, loadNotes } from "../lib/noteStore.js";
 
-// Configure marked
 marked.setOptions({
   breaks: true,
   gfm: true,
   sanitize: false,
 });
 
-// Detect TBT build
 const isTBTBuild =
   process.env.VERCEL_GIT_COMMIT_REF?.includes("tbt") ||
   process.env.VERCEL_URL?.includes("tbt") ||
   process.env.NODE_ENV === "development";
 
-// TBT Build Storage (in-memory fallback)
+if (isTBTBuild) {
+  console.log("🔧 TBT Build - Using in-memory storage");
+}
+
 class TBTStorage {
   constructor() {
     this.notes = new Map();
@@ -35,7 +32,7 @@ class TBTStorage {
   async getNotes(fridgeId) {
     return Array.from(this.notes.values())
       .filter((note) => note.fridgeId === fridgeId)
-      .sort((a, b) => b.timestamp - a.timestamp)
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       .slice(0, 10);
   }
 }
@@ -47,7 +44,6 @@ export default async function handler(req, res) {
   console.log("Method:", req.method);
   console.log("Build:", isTBTBuild ? "TBT" : "PROD");
 
-  // Allow CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader(
@@ -59,7 +55,6 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Handle GET requests for EventSource (SSE)
   if (req.method === "GET" && req.url === "/api/webhook") {
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
@@ -80,7 +75,6 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Handle GET requests for fetching notes
   if (req.method === "GET") {
     const fridgeId = req.query.fridgeId || req.query.fridge_id;
 
@@ -94,7 +88,8 @@ export default async function handler(req, res) {
       if (isTBTBuild) {
         notes = await tbtStorage.getNotes(fridgeId);
       } else {
-        notes = await fetchNotesForFridge(fridgeId, { limit: 25 });
+        const { notes: storedNotes } = await loadNotes(fridgeId);
+        notes = storedNotes;
       }
 
       return res.status(200).json({
@@ -120,7 +115,6 @@ export default async function handler(req, res) {
     const body = req.body;
     console.log("Body:", body);
 
-    // Extract fridge info
     let fridgeId, fridgeName;
 
     if (body.to) {
@@ -148,10 +142,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Note content is required" });
     }
 
-    // Process content
     let processedContent = noteContent;
 
-    // Convert Apple Notes format checkboxes
     processedContent = processedContent
       .replace(/\t◦\t/g, "- [ ] ")
       .replace(/☐\s*/g, "- [ ] ")
@@ -159,116 +151,91 @@ export default async function handler(req, res) {
       .replace(/✅\s*/g, "- [x] ")
       .replace(/☑\s*/g, "- [x] ");
 
-    // === TIME-BOUND TASK PROCESSING ===
-    // Parse due times: @2pm, @9:30am, @11AM
     processedContent = processedContent.replace(
       /(@\d{1,2}(:\d{2})?(am|pm|AM|PM))/g,
       '<span class="due-time" data-due-time="$1">$1</span>',
     );
 
-    // Parse due dates: @tomorrow, @friday, @2025-08-15
     processedContent = processedContent.replace(
       /(@(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2}))/gi,
       '<span class="due-date" data-due-date="$1">$1</span>',
     );
 
-    // Parse timers: @25min, @1hr, @30s, @2.5hours
     processedContent = processedContent.replace(
       /(@\d+(\.\d+)?(min|minutes|hr|hour|hours|sec|seconds|s|m|h))/gi,
       '<span class="timer" data-timer="$1">$1</span>',
     );
 
-    // Parse combined datetime: @tomorrow 3pm, @friday 9am
     processedContent = processedContent.replace(
       /(@(tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday) @?\d{1,2}(:\d{2})?(am|pm|AM|PM))/gi,
       '<span class="due-datetime" data-due-datetime="$1">$1</span>',
     );
 
-    // Parse recurring: @daily, @weekly, @monthly
     processedContent = processedContent.replace(
       /(@(daily|weekly|monthly|yearly))/gi,
       '<span class="recurring" data-recurring="$1">$1</span>',
     );
 
-    // Parse priority: @urgent, @high, @low
     processedContent = processedContent.replace(
       /(@(urgent|high|medium|low|critical))/gi,
       '<span class="priority priority-$2" data-priority="$1">$1</span>',
     );
-    // === END TIME-BOUND PROCESSING ===
 
-    // Convert markdown to HTML
     let formattedContent = marked(processedContent);
 
-    // IMPROVED CHECKBOX FIX - Prevents malformed attributes
     formattedContent = formattedContent.replace(
       /(<input[^>]*?)disabled([^>]*>)/gi,
       "$1$2",
     );
 
-    // Fix malformed checkboxes completely
     formattedContent = formattedContent.replace(
       /<input([^>]*?)>/gi,
       (match, attributes) => {
-        // Remove any malformed empty attributes like =""
         let cleanAttributes = attributes.replace(/\s*=""\s*/g, " ").trim();
 
-        // Ensure type="checkbox" is present
         if (!cleanAttributes.includes("type=")) {
           cleanAttributes = `type="checkbox" ${cleanAttributes}`;
         }
 
-        // Clean up extra spaces
         cleanAttributes = cleanAttributes.replace(/\s+/g, " ").trim();
 
         return `<input ${cleanAttributes}>`;
       },
     );
 
-    // Extract tags (including time-bound status)
     const tags = extractTags(formattedContent);
     const timeBoundStatus = determineTimeBoundStatus(formattedContent);
 
-    // Create note data with Firestore Timestamp
-    const noteData = {
+    const timestamp = Date.now();
+    const noteRecord = {
+      id: timestamp.toString(),
       content: formattedContent,
-      timestamp: Date.now(),
+      timestamp,
       fridgeId,
       fridgeName,
       source: "ios_shortcut",
-      tags: tags,
+      tags,
       timeBoundStatus,
       hasTimeElements: timeBoundStatus !== "normal",
       sender: body.sender || "iPhone",
     };
 
-    // Save to storage
-    let docRef;
+    let noteId = noteRecord.id;
+
     if (isTBTBuild) {
-      docRef = await tbtStorage.addNote(noteData);
+      const created = await tbtStorage.addNote(noteRecord);
+      noteId = created.id;
     } else {
-      const created = await createNoteDocument(noteData);
-      docRef = { id: created.id };
+      await appendNote(fridgeId, noteRecord, { keep: 20 });
+      noteId = noteRecord.id;
     }
 
-    console.log("✅ Note saved successfully with ID:", docRef.id);
-
-    // Cleanup old notes (only for Firebase)
-    if (!isTBTBuild) {
-      try {
-        const removed = await cleanupOldNotes(fridgeId, 10);
-        if (removed) {
-          console.log(`🧹 Cleaned up ${removed} old notes`);
-        }
-      } catch (cleanupError) {
-        console.log("⚠️ Cleanup failed (non-critical):", cleanupError.message);
-      }
-    }
+    console.log("✅ Note saved successfully with ID:", noteId);
 
     return res.status(200).json({
       success: true,
       message: "Note saved successfully",
-      noteId: docRef.id,
+      noteId,
       fridgeId,
       fridgeName,
       tags,
@@ -287,7 +254,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Helper functions
 function generateFridgeId(fridgeName) {
   let hash = 0;
   const str = fridgeName.toLowerCase().trim();
@@ -321,7 +287,6 @@ function extractTags(content) {
 function determineTimeBoundStatus(content) {
   const now = new Date();
 
-  // Check for urgent priority
   if (
     content.includes("priority-urgent") ||
     content.includes("priority-critical")
@@ -329,7 +294,6 @@ function determineTimeBoundStatus(content) {
     return "urgent";
   }
 
-  // Check for due times/dates
   const timeMatch = content.match(
     /data-due-time="@(\d{1,2})(:\d{2})?(am|pm|AM|PM)"/i,
   );
@@ -339,7 +303,6 @@ function determineTimeBoundStatus(content) {
   const datetimeMatch = content.match(/data-due-datetime="[^"]+"/i);
 
   if (timeMatch || dateMatch || datetimeMatch) {
-    // Parse the actual due date/time to determine status
     const dueDateTime = parseDueDateTime(timeMatch, dateMatch, datetimeMatch);
     if (dueDateTime) {
       const timeDiff = dueDateTime - now;
@@ -352,12 +315,10 @@ function determineTimeBoundStatus(content) {
     return "time-bound";
   }
 
-  // Check for timers
   if (content.includes("data-timer=")) {
     return "timer";
   }
 
-  // Check for recurring
   if (content.includes("data-recurring=")) {
     return "recurring";
   }
@@ -369,25 +330,19 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
   const now = new Date();
   let targetDate = new Date();
 
-  // Handle combined datetime first
   if (datetimeMatch) {
     const datetimeStr = datetimeMatch[0].match(
       /data-due-datetime="([^"]+)"/,
     )[1];
-    // Parse combined format like "@tomorrow 3pm"
     const parts = datetimeStr.split(" ");
     if (parts.length >= 2) {
       const datePart = parts[0];
       const timePart = parts[1].replace("@", "");
 
-      // Parse date part
       if (datePart.includes("tomorrow")) {
         targetDate.setDate(targetDate.getDate() + 1);
-      } else if (datePart.includes("today")) {
-        // Use current date
       }
 
-      // Parse time part
       const timeParseMatch = timePart.match(/(\d{1,2})(:\d{2})?(am|pm)/i);
       if (timeParseMatch) {
         let hours = parseInt(timeParseMatch[1]);
@@ -406,7 +361,6 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
     }
   }
 
-  // Parse date part
   if (dateMatch) {
     const dateStr = dateMatch[1].toLowerCase();
     if (dateStr === "today") {
@@ -417,7 +371,6 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
     } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
       targetDate = new Date(dateStr);
     } else {
-      // Handle day names
       const days = [
         "sunday",
         "monday",
@@ -437,7 +390,6 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
     }
   }
 
-  // Parse time part
   if (timeMatch) {
     let hours = parseInt(timeMatch[1]);
     const minutes = timeMatch[2] ? parseInt(timeMatch[2].slice(1)) : 0;
@@ -448,8 +400,7 @@ function parseDueDateTime(timeMatch, dateMatch, datetimeMatch) {
 
     targetDate.setHours(hours, minutes, 0, 0);
   } else if (!dateMatch) {
-    // If only time specified, assume today
-    targetDate.setHours(9, 0, 0, 0); // Default to 9 AM
+    targetDate.setHours(9, 0, 0, 0);
   }
 
   return targetDate;
