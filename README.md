@@ -22,21 +22,28 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 
 ## 🔄 Complete System Flow
 
-### The Journey of Your Note
+### Setup & Shortcut Flow
 
-1. **📱 iOS Share Sheet:** Share note from any app → "Send to Magnet" shortcut
-2. **🌐 Direct to Vercel:** Shortcut sends content directly to Vercel webhook endpoint
-3. **🧠 Content Processing:** Vercel converts markdown to HTML, fixes checkboxes
-4. **💾 Blob Storage:** Note saved to Vercel Blob with cleanup of old versions
-5. **⚡ Real-time Updates:** Fast 15-second polling keeps fridge updated
-6. **🎯 Smart Display:** Notes appear with task completion, tags, and celebrations
+1. **Fridge visits `/setup.html`:** Enter the Samsung-assigned fridge name.
+2. **Fridge ID generated:** The page hashes the name into `fridge_<hash>` and stores it in localStorage for the fridge UI.
+3. **Shortcut install link created:** The serverless `api/generate-shortcut` route builds a fridge-specific iOS Shortcut URL and renders a QR code on the fridge.
+4. **Scan & install:** Scanning the QR code opens the shortcut installer on iOS; tapping “Add” drops the “Send to Magnet” shortcut directly into the iOS share sheet.
+5. **Bookmark the fridge:** Setup links you to `/fridge.html?id=<fridgeId>` so the Family Hub browser always loads the right fridge state.
 
-### Shortcut Generation Flow
+### Note Delivery Pipeline
 
-1. **🔧 Fridge Setup:** User enters their Samsung fridge's existing name (from Samsung setup)
-2. **📱 QR Code Generation:** Vercel creates QR code containing custom iOS Shortcut URL
-3. **📲 Direct Install:** Scan QR code → iOS prompts "Add Shortcut?" → Tap "Add"
-4. **✅ Instant Setup:** Shortcut appears in Share Sheet immediately, no email needed
+1. **Share from iPhone:** Any app that supports the share sheet can pass text/HTML into the shortcut.
+2. **Shortcut → `api/webhook`:** The shortcut POSTs the payload (`fridgeId`, note content, sender info) straight to Vercel.
+3. **Serverless processing:** `api/webhook.js` sanitises/beautifies the note (marked -> HTML, checkbox fixes, tag extraction) and appends it to the fridge’s JSON document stored in Vercel Blob (`fridge-<id>.json`).
+4. **Blob storage rotation:** Notes are stored newest-first; older entries are trimmed automatically so blob files stay small.
+5. **Fridge polling:** `tada.js` polls `api/note?fridgeId=<id>` every ~15 s. The route reads the blob, normalises timestamps, and returns the note array.
+6. **Display & interaction:** The fridge UI renders the current note list, keeps local completion state synced, and triggers celebrations when tasks finish.
+
+### Delete & Cleanup
+
+- **Individual deletes:** The fridge UI calls `DELETE /api/note` with the note ID; the API rewrites the blob without that entry.
+- **Clear all:** `DELETE /api/note` with `deleteAll=true` wipes the blob entirely.
+- **Consistency:** Blob reads bypass CDN caching, so deletions are reflected on the next poll (no more “note resurrection”).
 
 ### Smart Features in Action
 
@@ -85,16 +92,16 @@ Transform your Samsung Smart Fridge into a family communication hub. Send notes 
 - **Progressive Web App:** Responsive design optimized for fridge touchscreens
 
 ### Backend API (Vercel Serverless)
-- **`api/webhook.js`:** Processes incoming emails from Pipedream
-- **`api/note.js`:** Handles note retrieval, deletion, and fridge communication
+- **`api/webhook.js`:** Receives shortcut payloads, formats notes, writes to blob storage
+- **`api/note.js`:** Reads/deletes blob-stored notes for each fridge
 - **`api/ping.js`:** Server-Sent Events for real-time updates (backup)
 - **`api/generate-shortcut.js`:** Creates custom iOS Shortcuts for each fridge
 
 ### Storage & Processing
-- **Vercel Blob Storage:** Persistent note storage with automatic cleanup
+- **Vercel Blob Storage:** Persistent note storage (`fridge-<id>.json`) with automatic trimming
 - **Marked.js:** Converts iOS Notes markdown to fridge-friendly HTML
 - **Smart Checkbox Processing:** Fixes disabled checkboxes, enables interaction
-- **Dynamic Blob Keys:** Handles Vercel's changing blob URL system
+- **Blob Access Token:** `BLOB_READ_WRITE_TOKEN` env var grants read/write access for all fridge blobs
 
 ### External Integrations
 - **iOS Shortcuts:** Direct QR code installation and native Share Sheet integration
